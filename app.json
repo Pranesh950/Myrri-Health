@@ -9,7 +9,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.healthapp"
+      "bundleIdentifier": "com.healthapp",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "We read your health data to show you personalized daily insights and trends.",
+        "NSHealthUpdateUsageDescription": "We write health data when you manually log workouts or metrics."
+      }
     },
     "android": {
       "package": "com.healthapp",
@@ -22,13 +26,14 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_DISTANCE",
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.READ_SLEEP",
-        "android.permission.health.READ_ACTIVE_CALORIES",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.health.READ_HEIGHT",
         "android.permission.health.READ_WEIGHT",
         "android.permission.health.READ_BLOOD_PRESSURE",
-        "android.permission.health.READ_BLOOD_OXYGEN",
+        "android.permission.health.READ_OXYGEN_SATURATION",
         "android.permission.health.READ_BODY_TEMPERATURE"
       ]
     },
@@ -36,9 +41,29 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "36.0.0"
+          }
+        }
+      ],
       "expo-router",
       "expo-font",
-      "expo-splash-screen"
-    ]
+      "expo-splash-screen",
+      "expo-health-connect",
+      "./plugins/with-health-connect.js"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "71049225-0edd-4b53-8cee-84c55f2d62b3"
+      }
+    },
+    "owner": "shpranesh"
   }
 }

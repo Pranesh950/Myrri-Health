@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,15 +6,28 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Animated,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { HealthService, HealthData } from "../../src/services/health";
+import { theme } from "../../src/theme";
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function ActivityScreen() {
   const [data, setData] = useState<HealthData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const loadData = useCallback(async () => {
     setRefreshing(true);
@@ -38,14 +51,8 @@ export default function ActivityScreen() {
   const calProgress = Math.min(calories / calGoal, 1);
 
   const distance = data?.distance ?? 0;
-  const distanceGoal = 8000;
-  const distProgress = Math.min(distance / distanceGoal, 1);
-
-  const heartRates = data?.heartRate ?? [];
-  const maxHR = heartRates.length > 0 ? Math.max(...heartRates) : 0;
-  const avgHR = heartRates.length > 0
-    ? Math.round(heartRates.reduce((a, b) => a + b, 0) / heartRates.length)
-    : 0;
+  const distGoal = 8000;
+  const distProgress = Math.min(distance / distGoal, 1);
 
   const workouts = [
     { type: "Run", duration: "32 min", calories: 320, time: "07:15" },
@@ -56,83 +63,52 @@ export default function ActivityScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadData} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={loadData} tintColor={theme.colors.ink} />
+      }
     >
-      <Text style={styles.title}>Activity</Text>
-      <Text style={styles.subtitle}>Today's movement and training</Text>
+      <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Text style={styles.title}>Activity</Text>
+        <Text style={styles.subtitle}>Today's movement and training</Text>
+      </Animated.View>
 
-      <View style={styles.progressSection}>
-        <Text style={styles.sectionTitle}>Daily Goals</Text>
-
-        <View style={styles.progressRow}>
-          <View style={styles.progressCircle}>
-            <MaterialCommunityIcons name="shoe-print" size={24} color="#2e7d32" />
-            <Text style={styles.progressValue}>{steps.toLocaleString()}</Text>
-            <Text style={styles.progressLabel}>steps</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${stepProgress * 100}%`, backgroundColor: "#2e7d32" }]} />
-            </View>
-            <Text style={styles.barTarget}>Goal: {stepGoal.toLocaleString()}</Text>
-          </View>
-        </View>
-
-        <View style={styles.progressRow}>
-          <View style={styles.progressCircle}>
-            <MaterialCommunityIcons name="fire" size={24} color="#e65100" />
-            <Text style={styles.progressValue}>{Math.round(calories)}</Text>
-            <Text style={styles.progressLabel}>kcal</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${calProgress * 100}%`, backgroundColor: "#e65100" }]} />
-            </View>
-            <Text style={styles.barTarget}>Goal: {calGoal}</Text>
-          </View>
-        </View>
-
-        <View style={styles.progressRow}>
-          <View style={styles.progressCircle}>
-            <MaterialCommunityIcons name="map-marker-distance" size={24} color="#1565c0" />
-            <Text style={styles.progressValue}>{(distance / 1000).toFixed(1)}</Text>
-            <Text style={styles.progressLabel}>km</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${distProgress * 100}%`, backgroundColor: "#1565c0" }]} />
-            </View>
-            <Text style={styles.barTarget}>Goal: {(distanceGoal / 1000).toFixed(0)} km</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.hrSection}>
-        <Text style={styles.sectionTitle}>Heart Rate</Text>
-        <View style={styles.hrGrid}>
-          <View style={styles.hrStat}>
-            <Text style={styles.hrStatValue}>{avgHR || "--"}</Text>
-            <Text style={styles.hrStatLabel}>Avg BPM</Text>
-          </View>
-          <View style={styles.hrStat}>
-            <Text style={styles.hrStatValue}>{maxHR || "--"}</Text>
-            <Text style={styles.hrStatLabel}>Max BPM</Text>
-          </View>
-          <View style={styles.hrStat}>
-            <Text style={styles.hrStatValue}>{heartRates.length}</Text>
-            <Text style={styles.hrStatLabel}>Readings</Text>
-          </View>
-        </View>
-      </View>
+      <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <ProgressRow
+          icon="shoe-print"
+          iconColor={theme.colors.success}
+          label="Steps"
+          value={`${steps.toLocaleString()} / ${stepGoal.toLocaleString()}`}
+          progress={stepProgress}
+          goal={stepGoal.toLocaleString()}
+        />
+        <View style={styles.divider} />
+        <ProgressRow
+          icon="fire"
+          iconColor={theme.colors.warning}
+          label="Calories"
+          value={Math.round(calories).toString()}
+          progress={calProgress}
+          goal={`${calGoal} kcal`}
+        />
+        <View style={styles.divider} />
+        <ProgressRow
+          icon="map-marker-distance"
+          iconColor={theme.colors.info}
+          label="Distance"
+          value={`${(distance / 1000).toFixed(1)} km`}
+          progress={distProgress}
+          goal={`${(distGoal / 1000).toFixed(0)} km`}
+        />
+      </Animated.View>
 
       <Text style={styles.sectionTitle}>Recent Workouts</Text>
       {workouts.map((w, i) => (
-        <View key={i} style={styles.workoutCard}>
+        <TouchableOpacity key={i} style={styles.workoutCard} activeOpacity={0.8}>
           <View style={styles.workoutIcon}>
             <MaterialCommunityIcons
               name={w.type === "Run" ? "run" : "dumbbell"}
               size={24}
-              color="#5e5ce6"
+              color={theme.colors.ink}
             />
           </View>
           <View style={styles.workoutInfo}>
@@ -140,87 +116,193 @@ export default function ActivityScreen() {
             <Text style={styles.workoutMeta}>{w.duration} · {w.calories} kcal</Text>
           </View>
           <Text style={styles.workoutTime}>{w.time}</Text>
-        </View>
+        </TouchableOpacity>
       ))}
 
-      <TouchableOpacity style={styles.logButton}>
-        <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+      <TouchableOpacity style={styles.logButton} activeOpacity={0.8}>
+        <MaterialCommunityIcons name="plus" size={20} color={theme.colors["on-primary"]} />
         <Text style={styles.logButtonText}>Log Workout</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
+function ProgressRow({
+  icon,
+  iconColor,
+  label,
+  value,
+  progress,
+  goal,
+}: {
+  icon: string;
+  iconColor: string;
+  label: string;
+  value: string;
+  progress: number;
+  goal: string;
+}) {
+  const barWidth = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(barWidth, {
+      toValue: progress,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  return (
+    <View style={styles.row}>
+      <View style={[styles.iconCircle, { backgroundColor: `${iconColor}15` }]}>
+        <MaterialCommunityIcons name={icon as any} size={22} color={iconColor} />
+      </View>
+      <View style={styles.fill}>
+        <Text style={styles.rowValue}>{value}</Text>
+        <Text style={styles.rowLabel}>{label}</Text>
+      </View>
+      <View style={styles.barTrack}>
+        <Animated.View
+          style={[
+            styles.barFill,
+            { backgroundColor: iconColor, width: barWidth.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) },
+          ]}
+        />
+      </View>
+      <Text style={styles.goalText}>{goal}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
-  content: { padding: 20, paddingBottom: 100 },
-  title: { fontSize: 28, fontWeight: "700", color: "#1a1a2e", marginTop: 60 },
-  subtitle: { fontSize: 15, color: "#6e6e73", marginTop: 4, marginBottom: 24 },
-  sectionTitle: { fontSize: 14, fontWeight: "600", color: "#6e6e73", marginBottom: 12 },
-  progressSection: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.canvas,
   },
-  progressRow: {
+  content: {
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxxl * 2,
+  },
+  header: {
+    marginTop: 60,
+    marginBottom: theme.spacing.xxl,
+  },
+  title: {
+    ...theme.typography.displayMd,
+    color: theme.colors.ink,
+  },
+  subtitle: {
+    ...theme.typography.bodyMd,
+    color: theme.colors.body,
+    marginTop: theme.spacing.sm,
+  },
+  card: {
+    backgroundColor: theme.colors.canvas,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.hairline,
+    padding: theme.spacing.xl,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-    gap: 14,
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
-  progressCircle: { alignItems: "center", width: 60 },
-  progressValue: { fontSize: 18, fontWeight: "700", color: "#1a1a2e", marginTop: 4 },
-  progressLabel: { fontSize: 11, color: "#8e8e93" },
-  progressBar: { flex: 1 },
-  barBg: {
-    height: 8,
-    backgroundColor: "#f0f0f5",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  barFill: { height: "100%", borderRadius: 4 },
-  barTarget: { fontSize: 11, color: "#8e8e93", marginTop: 4 },
-  hrSection: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  hrGrid: { flexDirection: "row", justifyContent: "space-around" },
-  hrStat: { alignItems: "center" },
-  hrStatValue: { fontSize: 22, fontWeight: "700", color: "#1a1a2e" },
-  hrStatLabel: { fontSize: 11, color: "#8e8e93", marginTop: 2 },
-  workoutCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  workoutIcon: {
+  iconCircle: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: "#f0f0ff",
+    borderRadius: theme.radii.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  workoutInfo: { flex: 1 },
-  workoutType: { fontSize: 16, fontWeight: "600", color: "#1a1a2e" },
-  workoutMeta: { fontSize: 13, color: "#6e6e73", marginTop: 2 },
-  workoutTime: { fontSize: 13, color: "#8e8e93" },
+  fill: {
+    minWidth: 70,
+  },
+  rowValue: {
+    ...theme.typography.labelMd,
+    color: theme.colors.ink,
+  },
+  rowLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.muted,
+    marginTop: 2,
+  },
+  barTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: theme.colors["surface-soft"],
+    borderRadius: theme.radii.full,
+    overflow: "hidden",
+  },
+  barFill: {
+    height: "100%",
+    borderRadius: theme.radii.full,
+  },
+  goalText: {
+    ...theme.typography.caption,
+    color: theme.colors.muted,
+    width: 60,
+    textAlign: "right",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.hairline,
+    marginVertical: theme.spacing.sm,
+  },
+  sectionTitle: {
+    ...theme.typography.titleMd,
+    color: theme.colors.ink,
+    marginTop: theme.spacing.xxl,
+    marginBottom: theme.spacing.lg,
+  },
+  workoutCard: {
+    backgroundColor: theme.colors.canvas,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.hairline,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  workoutIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors["surface-soft"],
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  workoutInfo: {
+    flex: 1,
+  },
+  workoutType: {
+    ...theme.typography.labelMd,
+    color: theme.colors.ink,
+  },
+  workoutMeta: {
+    ...theme.typography.caption,
+    color: theme.colors.body,
+    marginTop: 2,
+  },
+  workoutTime: {
+    ...theme.typography.caption,
+    color: theme.colors.muted,
+  },
   logButton: {
     flexDirection: "row",
-    backgroundColor: "#5e5ce6",
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    marginTop: 12,
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.xxl,
   },
-  logButtonText: { fontSize: 16, fontWeight: "600", color: "#fff" },
+  logButtonText: {
+    ...theme.typography.labelMd,
+    color: theme.colors["on-primary"],
+  },
 });

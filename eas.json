@@ -1,0 +1,41 @@
+{
+  "cli": {
+    "version": ">= 20.3.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "GRADLE_OPTS": "-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError",
+        "JAVA_OPTS": "-Xmx4g -XX:MaxMetaspaceSize=512m"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "GRADLE_OPTS": "-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError",
+        "JAVA_OPTS": "-Xmx4g -XX:MaxMetaspaceSize=512m"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
+
+
+
+
+
+
+
+
+

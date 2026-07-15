@@ -1,10 +1,16 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { theme } from "../../src/theme";
 
 type Device = "apple" | "garmin" | "fitbit" | "other";
 
-const devices: { id: Device; label: string; icon: string; description: string }[] = [
+const devices: {
+  id: Device;
+  label: string;
+  icon: string;
+  description: string;
+}[] = [
   {
     id: "apple",
     label: "Apple Watch",
@@ -15,19 +21,19 @@ const devices: { id: Device; label: string; icon: string; description: string }[
     id: "garmin",
     label: "Garmin",
     icon: "watch-variant",
-    description: "Connect via Garmin Connect",
+    description: "Syncs via Health Connect on Android",
   },
   {
     id: "fitbit",
     label: "Fitbit",
     icon: "watch-variant",
-    description: "Connect via Fitbit app",
+    description: "Syncs via Health Connect on Android",
   },
   {
     id: "other",
     label: "No Device",
     icon: "cellphone",
-    description: "Manual tracking only",
+    description: "Track manually",
   },
 ];
 
@@ -60,20 +66,20 @@ export default function DeviceScreen() {
             key={device.id}
             style={styles.option}
             onPress={() => handleSelect(device.id)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
             <View style={styles.optionIcon}>
               <MaterialCommunityIcons
                 name={device.icon as any}
                 size={28}
-                color="#5e5ce6"
+                color={theme.colors["on-primary"]}
               />
             </View>
             <View style={styles.optionInfo}>
               <Text style={styles.optionLabel}>{device.label}</Text>
               <Text style={styles.optionDesc}>{device.description}</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color="#c7c7cc" />
+            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.muted} />
           </TouchableOpacity>
         ))}
       </View>
@@ -84,48 +90,47 @@ export default function DeviceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
-    paddingHorizontal: 24,
+    backgroundColor: theme.colors.canvas,
+    paddingHorizontal: theme.spacing.xl,
   },
   header: {
     marginTop: 100,
-    marginBottom: 40,
+    marginBottom: theme.spacing.xxl,
   },
   step: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#5e5ce6",
-    marginBottom: 12,
+    ...theme.typography.caption,
+    color: theme.colors.ink,
+    marginBottom: theme.spacing.md,
     textTransform: "uppercase",
-    letterSpacing: 1,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#1a1a2e",
-    marginBottom: 10,
+    ...theme.typography.displayMd,
+    color: theme.colors.ink,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#6e6e73",
+    ...theme.typography.bodyMd,
+    color: theme.colors.body,
     lineHeight: 22,
   },
   options: {
-    gap: 12,
+    gap: theme.spacing.md,
   },
   option: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
+    backgroundColor: theme.colors.canvas,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.hairline,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   optionIcon: {
     width: 52,
     height: 52,
-    borderRadius: 14,
-    backgroundColor: "#f0f0ff",
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -133,13 +138,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionLabel: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#1a1a2e",
+    ...theme.typography.labelMd,
+    color: theme.colors.ink,
   },
   optionDesc: {
-    fontSize: 13,
-    color: "#8e8e93",
+    ...theme.typography.caption,
+    color: theme.colors.body,
     marginTop: 2,
   },
 });

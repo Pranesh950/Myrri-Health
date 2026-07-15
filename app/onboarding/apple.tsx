@@ -11,14 +11,15 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { HealthService } from "../../src/services/health";
+import { theme } from "../../src/theme";
 
 const permissions = [
-  { icon: "shoe-print", label: "Steps & Distance", color: "#2e7d32" },
-  { icon: "heart", label: "Heart Rate", color: "#e53935" },
-  { icon: "sleep", label: "Sleep Analysis", color: "#7b1fa2" },
-  { icon: "fire", label: "Active Calories", color: "#e65100" },
-  { icon: "water-opacity", label: "Blood Oxygen", color: "#1565c0" },
-  { icon: "thermometer", label: "Body Temperature", color: "#00838f" },
+  { icon: "shoe-print", label: "Steps & Distance", color: theme.colors.success },
+  { icon: "heart", label: "Heart Rate", color: theme.colors.danger },
+  { icon: "sleep", label: "Sleep Analysis", color: theme.colors.info },
+  { icon: "fire", label: "Active Calories", color: theme.colors.warning },
+  { icon: "water-opacity", label: "Blood Oxygen", color: theme.colors.info },
+  { icon: "thermometer", label: "Body Temperature", color: theme.colors.info },
 ];
 
 export default function AppleScreen() {
@@ -83,7 +84,7 @@ export default function AppleScreen() {
               <MaterialCommunityIcons name={p.icon as any} size={22} color={p.color} />
             </View>
             <Text style={styles.permissionLabel}>{p.label}</Text>
-            <MaterialCommunityIcons name="check-circle" size={20} color="#c7c7cc" />
+            <MaterialCommunityIcons name="check-circle" size={20} color={theme.colors.hairline} />
           </View>
         ))}
       </View>
@@ -95,7 +96,7 @@ export default function AppleScreen() {
           disabled={requesting}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="shield-lock" size={20} color="#fff" />
+          <MaterialCommunityIcons name="shield-lock" size={20} color={theme.colors["on-primary"]} />
           <Text style={styles.connectButtonText}>
             {requesting ? "Requesting Access..." : "Allow HealthKit Access"}
           </Text>
@@ -112,82 +113,78 @@ export default function AppleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
-    paddingHorizontal: 24,
+    backgroundColor: theme.colors.canvas,
+    paddingHorizontal: theme.spacing.xl,
   },
   header: {
     marginTop: 100,
-    marginBottom: 32,
+    marginBottom: theme.spacing.xxl,
   },
   step: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#5e5ce6",
-    marginBottom: 12,
+    ...theme.typography.caption,
+    color: theme.colors.ink,
+    marginBottom: theme.spacing.md,
     textTransform: "uppercase",
-    letterSpacing: 1,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#1a1a2e",
-    marginBottom: 10,
+    ...theme.typography.displayMd,
+    color: theme.colors.ink,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#6e6e73",
+    ...theme.typography.bodyMd,
+    color: theme.colors.body,
     lineHeight: 22,
   },
   permissionsList: {
-    gap: 4,
+    gap: theme.spacing.sm,
   },
   permissionRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    gap: 12,
+    backgroundColor: theme.colors.canvas,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.hairline,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   permissionIcon: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: theme.radii.sm,
     alignItems: "center",
     justifyContent: "center",
   },
   permissionLabel: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#1a1a2e",
+    ...theme.typography.bodyMd,
+    color: theme.colors.ink,
   },
   footer: {
     marginTop: "auto",
     paddingBottom: 60,
-    gap: 12,
+    gap: theme.spacing.md,
   },
   connectButton: {
     flexDirection: "row",
-    backgroundColor: "#5e5ce6",
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: theme.spacing.md,
   },
   connectButtonText: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#fff",
+    ...theme.typography.labelMd,
+    color: theme.colors["on-primary"],
   },
   skipButton: {
     alignItems: "center",
-    padding: 14,
+    padding: theme.spacing.md,
   },
   skipButtonText: {
-    fontSize: 15,
-    color: "#8e8e93",
-    fontWeight: "500",
+    ...theme.typography.bodyMd,
+    color: theme.colors.body,
   },
 });
