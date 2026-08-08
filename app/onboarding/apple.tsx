@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { HealthService } from "../../src/services/health";
+import { useGoBack } from "../../src/hooks/useGoBack";
 import { theme } from "../../src/theme";
 
 const permissions = [
@@ -24,6 +25,7 @@ const permissions = [
 
 export default function AppleScreen() {
   const router = useRouter();
+  const handleBack = useGoBack();
   const [requesting, setRequesting] = useState(false);
 
   const handleConnect = async () => {
@@ -31,7 +33,7 @@ export default function AppleScreen() {
       Alert.alert(
         "HealthKit Not Available",
         "Apple HealthKit is only available on iOS devices.",
-        [{ text: "OK", onPress: () => router.back() }]
+        [{ text: "OK", onPress: handleBack }]
       );
       return;
     }
@@ -39,17 +41,28 @@ export default function AppleScreen() {
     setRequesting(true);
     try {
       const granted = await HealthService.initialize();
-      if (granted) {
-        await AsyncStorage.setItem("onboarding_complete", "true");
-        await AsyncStorage.setItem("device_type", "apple");
-        router.push("/onboarding/complete");
-      } else {
+      if (!granted) {
         Alert.alert(
-          "Permission Denied",
-          "HealthKit access was denied. You can enable it later in Settings > Privacy > Health.",
-          [{ text: "Skip", onPress: () => router.push("/onboarding/complete") }]
+          "Health access could not be requested",
+          "HealthKit is unavailable in this build or on this device. You can continue and connect later from the Overview tab.",
+          [
+            {
+              text: "Continue",
+              onPress: async () => {
+                await HealthService.markSetupLater();
+                router.push("/onboarding/profile");
+              },
+            },
+          ]
         );
+        return;
       }
+
+      // Apple reports that authorization completed, but intentionally does not
+      // reveal which read types the user allowed. The app will explain this
+      // honestly on the Overview tab if no samples are available yet.
+      await AsyncStorage.setItem("device_type", "apple");
+      router.push("/onboarding/profile");
     } catch {
       Alert.alert(
         "Error",
@@ -62,18 +75,22 @@ export default function AppleScreen() {
   };
 
   const handleSkip = async () => {
-    await AsyncStorage.setItem("onboarding_complete", "true");
+    await HealthService.markSetupLater();
     await AsyncStorage.setItem("device_type", "apple");
-    router.push("/onboarding/complete");
+    router.push("/onboarding/profile");
   };
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity onPress={handleBack} style={styles.backBtn} activeOpacity={0.7}>
+        <MaterialCommunityIcons name="arrow-left" size={22} color={theme.colors.ink} />
+      </TouchableOpacity>
+
       <View style={styles.header}>
-        <Text style={styles.step}>2 of 2</Text>
+        <Text style={styles.step}>2 of 3</Text>
         <Text style={styles.title}>Connect to HealthKit</Text>
         <Text style={styles.subtitle}>
-          Allow access to your health data so we can show your daily metrics.
+          Apple will show the permission sheet next. Choose the categories you want to share; you can change them later in Settings.
         </Text>
       </View>
 
@@ -98,7 +115,7 @@ export default function AppleScreen() {
         >
           <MaterialCommunityIcons name="shield-lock" size={20} color={theme.colors["on-primary"]} />
           <Text style={styles.connectButtonText}>
-            {requesting ? "Requesting Access..." : "Allow HealthKit Access"}
+            {requesting ? "Opening Apple Health..." : "Review Health Access"}
           </Text>
         </TouchableOpacity>
 
@@ -116,8 +133,20 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.canvas,
     paddingHorizontal: theme.spacing.xl,
   },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 56,
+    marginBottom: theme.spacing.lg,
+  },
   header: {
-    marginTop: 100,
+    marginTop: 40,
     marginBottom: theme.spacing.xxl,
   },
   step: {

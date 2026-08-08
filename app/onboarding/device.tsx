@@ -1,67 +1,138 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  ScrollView,
+} from "react-native";
 import { useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { theme } from "../../src/theme";
+import { HealthService } from "../../src/services/health";
 
-type Device = "apple" | "garmin" | "fitbit" | "other";
+type Device =
+  | "apple"
+  | "samsung"
+  | "googlefit"
+  | "garmin"
+  | "fitbit"
+  | "xiaomi"
+  | "huawei"
+  | "oura"
+  | "whoop"
+  | "amazfit"
+  | "other";
 
 const devices: {
   id: Device;
   label: string;
   icon: string;
   description: string;
+  platforms: ("android" | "ios")[];
 }[] = [
   {
     id: "apple",
     label: "Apple Watch",
     icon: "watch",
-    description: "Syncs directly with HealthKit",
+    description: "Syncs directly with Apple Health",
+    platforms: ["ios"],
+  },
+  {
+    id: "samsung",
+    label: "Samsung Galaxy Watch",
+    icon: "watch",
+    description: "Syncs via Samsung Health",
+    platforms: ["android"],
+  },
+  {
+    id: "googlefit",
+    label: "Pixel Watch",
+    icon: "watch-variant",
+    description: "Syncs via Google Fit",
+    platforms: ["android"],
   },
   {
     id: "garmin",
     label: "Garmin",
     icon: "watch-variant",
-    description: "Syncs via Health Connect on Android",
+    description: "Syncs via Health Connect / Apple Health",
+    platforms: ["android", "ios"],
   },
   {
     id: "fitbit",
     label: "Fitbit",
     icon: "watch-variant",
-    description: "Syncs via Health Connect on Android",
+    description: "Syncs via Health Connect / Apple Health",
+    platforms: ["android", "ios"],
+  },
+  {
+    id: "xiaomi",
+    label: "Xiaomi (Mi Band)",
+    icon: "watch",
+    description: "Syncs via Mi Fitness",
+    platforms: ["android", "ios"],
+  },
+  {
+    id: "amazfit",
+    label: "Amazfit",
+    icon: "watch",
+    description: "Syncs via the Zepp app",
+    platforms: ["android", "ios"],
+  },
+  {
+    id: "huawei",
+    label: "Huawei",
+    icon: "watch",
+    description: "Syncs via HUAWEI Health",
+    platforms: ["android", "ios"],
   },
   {
     id: "other",
     label: "No Device",
     icon: "cellphone",
     description: "Track manually",
+    platforms: ["android", "ios"],
   },
 ];
 
 export default function DeviceScreen() {
   const router = useRouter();
+  const currentPlatform = Platform.OS === "ios" ? "ios" : "android";
+  const visibleDevices = devices.filter((device) =>
+    device.platforms.includes(currentPlatform)
+  );
 
-  const handleSelect = (device: Device) => {
+  const handleSelect = async (device: Device) => {
     if (device === "apple") {
       router.push("/onboarding/apple");
-    } else if (device === "garmin" || device === "fitbit") {
-      router.push({ pathname: "/onboarding/wearables", params: { brand: device } });
+    } else if (device === "other") {
+      await HealthService.markSetupLater();
+      router.push("/onboarding/profile");
     } else {
-      router.push("/onboarding/complete");
+      router.push({
+        pathname: "/onboarding/wearables",
+        params: { brand: device },
+      });
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.step}>1 of 2</Text>
+        <Text style={styles.step}>1 of 3</Text>
         <Text style={styles.title}>What do you wear?</Text>
         <Text style={styles.subtitle}>
-          We'll connect your device to pull in health data automatically.
+          Connect a device for automatic health data, or continue without one.
+          You can change this later.
         </Text>
       </View>
 
-      <View style={styles.options}>
-        {devices.map((device) => (
+      <ScrollView
+        contentContainerStyle={styles.options}
+        showsVerticalScrollIndicator={false}
+      >
+        {visibleDevices.map((device) => (
           <TouchableOpacity
             key={device.id}
             style={styles.option}
@@ -79,10 +150,14 @@ export default function DeviceScreen() {
               <Text style={styles.optionLabel}>{device.label}</Text>
               <Text style={styles.optionDesc}>{device.description}</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.muted} />
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={22}
+              color={theme.colors.muted}
+            />
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -115,6 +190,7 @@ const styles = StyleSheet.create({
   },
   options: {
     gap: theme.spacing.md,
+    paddingBottom: theme.spacing.xxl * 2,
   },
   option: {
     flexDirection: "row",

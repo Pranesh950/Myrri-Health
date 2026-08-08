@@ -1,22 +1,24 @@
 {
   "expo": {
-    "name": "health-app",
+    "name": "Myrri",
     "slug": "health-app",
     "version": "1.0.0",
-    "scheme": "health-app",
+    "scheme": "myrri",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.healthapp",
+      "bundleIdentifier": "com.myrri.app",
       "infoPlist": {
         "NSHealthShareUsageDescription": "We read your health data to show you personalized daily insights and trends.",
-        "NSHealthUpdateUsageDescription": "We write health data when you manually log workouts or metrics."
+        "NSHealthUpdateUsageDescription": "We write health data when you manually log workouts or metrics.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.healthapp",
+      "package": "com.myrri.app",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,17 +30,23 @@
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_DISTANCE",
         "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_RESPIRATORY_RATE",
         "android.permission.health.READ_SLEEP",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.health.READ_HEIGHT",
         "android.permission.health.READ_WEIGHT",
         "android.permission.health.READ_BLOOD_PRESSURE",
         "android.permission.health.READ_OXYGEN_SATURATION",
-        "android.permission.health.READ_BODY_TEMPERATURE"
+        "android.permission.health.READ_BODY_TEMPERATURE",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_LEAN_BODY_MASS",
+        "android.permission.health.READ_VO2_MAX",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
@@ -56,7 +64,29 @@
       "expo-font",
       "expo-splash-screen",
       "expo-health-connect",
-      "./plugins/with-health-connect.js"
+      "./plugins/with-health-kit-ios.js",
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "We read your health data to show you personalized daily insights and trends.",
+          "healthUpdatePermission": "We write health data when you manually log workouts or metrics."
+        }
+      ],
+      "llama.rn",
+      "./plugins/with-llama-pruned.js",
+      "expo-sqlite",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Myrri to use the camera to scan food product barcodes."
+        }
+      ]
     ],
     "extra": {
       "router": {},

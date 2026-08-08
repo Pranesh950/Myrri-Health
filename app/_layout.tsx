@@ -2,8 +2,15 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
+import {
+  useFonts,
+  Nunito_400Regular,
+  Nunito_500Medium,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+} from "@expo-google-fonts/nunito";
 import { HealthService } from "../src/services/health";
+import { ensureMorningBriefScheduled } from "../src/services/morningBrief";
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -11,67 +18,42 @@ export default function RootLayout() {
   const router = useRouter();
 
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
   });
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // App open: probe Health Connect / HealthKit for any data within the
-      // last week. We only use this as a **first-launch** gating signal —
-      // have we ever seen this user complete onboarding? — so a user who
-      // already finished setup is never bounced back into onboarding just
-      // because their permissions were revoked or HC sync broke later.
-      // They can re-trigger the flow from the in-app "Health data not
-      // available" alert on the Overview tab.
-      //
-      // We deliberately skip HealthService.initialize() here, because on
-      // Android it pops the system HC settings screen and would race with
-      // our own onboarding redirect. The onboarding flows already call
-      // initialize() themselves.
-
-      const HEALTH_DATA_LOOKBACK_DAYS = 7;
-
       const onboardingFlag = await AsyncStorage.getItem("onboarding_complete");
       const isOnboardingComplete = onboardingFlag === "true";
-
-      let noDataInHealthConnect = false;
-      if (!isOnboardingComplete) {
-        const available = await HealthService.isAvailable();
-        if (!available) {
-          noDataInHealthConnect = true;
-        } else {
-          try {
-            noDataInHealthConnect = !(await HealthService.hasAnyData(
-              HEALTH_DATA_LOOKBACK_DAYS
-            ));
-          } catch {
-            // readRecords throws when our app has no read permission yet;
-            // treat that the same as "no data" so first-launch users get a
-            // chance to walk through the wearables flow and grant access.
-            noDataInHealthConnect = true;
-          }
-        }
-      }
-
-      if (cancelled) return;
-
       const inOnboardingGroup = segments[0] === "onboarding";
 
-      if (
-        !isOnboardingComplete &&
-        noDataInHealthConnect &&
-        !inOnboardingGroup
-      ) {
-        await AsyncStorage.removeItem("onboarding_complete");
+      // If the user already finished onboarding, warm up the health SDK so
+      // the first tab load has permissions + connection ready. If health
+      // access is missing later (revoked, Health Connect uninstalled, etc.)
+      // the Overview tab shows a connect banner — onboarding is never
+      // restarted on its own.
+      if (isOnboardingComplete) {
+        try {
+          await HealthService.initialize(false);
+        } catch (e) {
+          console.warn("[RootLayout] Health init failed:", e);
+        }
+
+        // Keep the morning brief scheduled with fresh content (no-op unless enabled).
+        ensureMorningBriefScheduled().catch(() => {});
+      } else if (!inOnboardingGroup) {
+        // First launch (or incomplete onboarding) → device picker.
         router.replace("/onboarding/device");
       }
 
+      if (cancelled) return;
       if (!fontsLoaded && !fontError) return;
       if (fontError) {
-        console.warn("[RootLayout] Failed to load Inter fonts:", fontError);
+        console.warn("[RootLayout] Failed to load Nunito fonts:", fontError);
       }
       setReady(true);
     })();
@@ -88,9 +70,16 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="onboarding" />
-        <Stack.Screen name="journal" />
-        <Stack.Screen name="sleep/detail" />
-        <Stack.Screen name="strain/detail" />
+        <Stack.Screen
+          name="food-chat"
+          options={{ presentation: "modal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="meal-options"
+          options={{ presentation: "modal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen name="barcode-scan" />
+        <Stack.Screen name="settings" />
       </Stack>
     </>
   );

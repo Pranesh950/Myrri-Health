@@ -1,11 +1,23 @@
+import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { theme } from "../../src/theme";
+import { loadPlan } from "../../src/services/coachPlan";
+import { isAIEnabled } from "../../src/services/localLLM";
 
 export default function CompleteScreen() {
   const router = useRouter();
+  const [goalLabels, setGoalLabels] = useState<string[]>([]);
+  const [aiEnabled, setAiEnabled] = useState(true);
+
+  useEffect(() => {
+    loadPlan()
+      .then((plan) => setGoalLabels(plan?.goalLabels ?? []))
+      .catch(() => {});
+    isAIEnabled().then(setAiEnabled).catch(() => {});
+  }, []);
 
   const handleGetStarted = async () => {
     await AsyncStorage.setItem("onboarding_complete", "true");
@@ -24,6 +36,24 @@ export default function CompleteScreen() {
           Your health data will appear on the Overview tab. You can change your
           device settings anytime in Profile.
         </Text>
+
+        {goalLabels.length > 0 && (
+          <View style={styles.planCard}>
+            <View style={styles.planHeader}>
+              <MaterialCommunityIcons name="creation" size={18} color={theme.colors.primary} />
+              <Text style={styles.planTitle}>Your coach plan</Text>
+            </View>
+            <Text style={styles.planGoals}>
+              {goalLabels.join(" + ")}
+            </Text>
+            <Text style={styles.planBody}>
+              Your habits are ready in the Journal, nutrition targets appear
+              below your food log, and your sleep goal shows on the Home sleep
+              dial.
+              {aiEnabled && " Ask Coach anything to adjust the plan."}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -68,6 +98,40 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: theme.spacing.md,
+  },
+  planCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.lg,
+    marginTop: theme.spacing.xl,
+    alignItems: "center",
+    ...theme.shadows.cardSoft,
+  },
+  planHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
+  },
+  planTitle: {
+    ...theme.typography.titleSm,
+    color: theme.colors.ink,
+  },
+  planGoals: {
+    ...theme.typography.titleMd,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
+    textAlign: "center",
+  },
+  planBody: {
+    ...theme.typography.legal,
+    color: theme.colors.body,
+    textAlign: "center",
+    lineHeight: 17,
   },
   footer: {
     paddingBottom: 60,

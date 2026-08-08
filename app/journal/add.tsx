@@ -10,9 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { theme } from "../../src/theme";
+import { useGoBack } from "../../src/hooks/useGoBack";
 import { saveJournalEntry, JournalEntry } from "../../src/services/journal";
 
 const moodOptions: {
@@ -28,7 +28,7 @@ const moodOptions: {
 ];
 
 export default function AddJournalScreen() {
-  const router = useRouter();
+  const handleBack = useGoBack();
   const [text, setText] = useState("");
   const [selectedMood, setSelectedMood] = useState<JournalEntry["mood"]>("good");
   const [saving, setSaving] = useState(false);
@@ -56,7 +56,7 @@ export default function AddJournalScreen() {
       text: text.trim(),
       mood: selectedMood,
     });
-    router.back();
+    handleBack();
   };
 
   const canSave = text.trim().length > 0;
@@ -139,7 +139,7 @@ export default function AddJournalScreen() {
 
         <TouchableOpacity
           style={styles.cancelButton}
-          onPress={() => router.back()}
+          onPress={handleBack}
           activeOpacity={0.8}
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>

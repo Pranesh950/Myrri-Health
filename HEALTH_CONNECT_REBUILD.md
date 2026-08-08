@@ -1,11 +1,15 @@
 # Rebuilding the Android dev client after Health Connect fixes
 
-The crash below happens because the old `health-app.apk` was built before the `HealthConnectPermissionDelegate` was registered in `MainActivity.kt`.
+The old `health-app.apk` may still contain the previous Health Connect native configuration. This fix uses the `expo-health-connect` plugin for the permission delegate and removes the duplicate custom activity patch.
+
+The original failure looked like this:
 
 ```
-kotlin.UninitializedPropertyAccessException: lateinit property requestPermission has not been initialized
-  dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate.launchPermissionsDialog(...)
+dev.matinzd.healthconnect.utils.InvalidRecordType: Record type is not valid
+  dev.matinzd.healthconnect.permissions.PermissionUtils.parsePermissions(...)
 ```
+
+Permission requests now use the installed bridge's short record names (for example, `Steps`, `SleepSession`, and `ExerciseSession`) and isolate optional metrics from the core connection request.
 
 `npx expo start --tunnel` only starts the JavaScript bundler — it does **not** rebuild the native Android app. Because this crash is in native Kotlin code, you must build and install a new native APK.
 
@@ -20,15 +24,16 @@ Copy and paste the whole block below. `eas build` is long-running; after it fini
 
 ```bash
 # 1. Clean and regenerate the native project
-#    (applies the updated config plugin to MainActivity.kt)
+#    (applies expo-health-connect and removes the old custom Android patch)
 npx expo prebuild --clean
 
 # 2. Build a new development client APK via EAS
 #    (wait for this to finish and download the APK before continuing)
 eas build --profile development --platform android
 
-# 3. Remove the old APK so you don't accidentally open it
-rm -f health-app.apk
+# 3. Uninstall the old app from the Android device before installing the new APK.
+#    This prevents stale native permissions/configuration from being reused.
+#    Then install the newly downloaded APK.
 
 # 4. Start the dev server
 #    (only run this after you have installed the new APK on your device)
@@ -45,11 +50,7 @@ npx expo start --tunnel
 
 ## Why this is required
 
-The old APK's `MainActivity.kt` does not contain:
+Health Connect is a native Android module. Updating JavaScript or starting the Expo bundler cannot change the permissions, manifest, or native activity code inside an already-installed APK. Only a fresh prebuild and native build can install the corrected configuration.
 
-```kotlin
-HealthConnectPermissionDelegate.setPermissionDelegate(this)
-```
-
-Every call to `requestPermission()` then tries to use an uninitialized `lateinit` property and crashes. Only a fresh native build can include the fixed `MainActivity`.
+After installing the new APK, open Health Connect and confirm this app has read access for Steps, Heart Rate, Sleep, Calories, Distance, and any optional metrics you want to use. Workout history is intentionally not requested during initial setup because some older Health Connect builds reject the exercise permission. The app checks for an independently granted `ExerciseSession` permission before reading workouts; if it is unavailable, the Fitness screen continues without workout records instead of crashing.
 
