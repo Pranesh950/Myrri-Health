@@ -94,7 +94,7 @@ Track 40+ habits in one tap — water, steps, protein, veggies, alcohol, caffein
 **🍎 Food Logging & Barcode Scanner**
 
 - **300,000+ foods** in an offline nutrition database — log meals with no internet.
-- **Barcode scanning** — point your camera at any product for instant calorie, protein, carb, and fat logging.
+- **Barcode scanning** — point your camera at most packaged products for instant calorie, protein, carb, and fat logging; unknown barcodes fall back to AI or manual search.
 - **AI food chat** — describe a meal in plain words ("two eggs, toast, coffee") and it's logged for you.
 - Daily nutrition goals for calories, protein, carbs, fat, and fiber.
 
@@ -166,6 +166,7 @@ Syncs with Google Health Connect (steps, heart rate, HRV, sleep, calories, VO₂
 - **App type:** Application
 - **Content rating questionnaire:** health/fitness data → complete honestly; the app collects health data but stores it locally (no servers)
 - **Data safety form:** declare *health and fitness data* — **not collected** if it never leaves the device, but check the "processed ephemerally" options if any AI provider receives scrubbed data
+- **Health Connect API Access declaration:** required by Google Play for any app that reads Health Connect data (this app requests steps, heart rate, sleep, HRV, VO₂ max, blood pressure, exercise sessions, and more) — complete this form in Play Console before rollout
 - **Privacy policy URL:** host the `PRIVACY_POLICY.md` content (required by Play)
 - **Store listing experiments (CSLs):** A/B test the short description alternates after launch — Google feeds conversion rate back into ranking
 - **Android Vitals:** keep crash-free sessions high — stability directly affects Play ranking

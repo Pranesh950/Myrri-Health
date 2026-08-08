@@ -42,13 +42,13 @@ Every core feature — readiness, strain, biological age, journaling, food loggi
 
 | | Myrri | Whoop / Ōura | MyFitnessPal / Noom |
 |---|---|---|---|
-| **Price** | Free forever | $10–30 / month | $10–50 / month |
-| **Account required** | ❌ No | ✅ Yes | ✅ Yes |
-| **Wearable needed** | ❌ Works with phone sensors & manual logs | ✅ Required | ❌ (but data sold) |
+| **Price** | ✅ Free forever | $10–30 / month | $10–50 / month |
+| **No account required** | ✅ | ❌ | ❌ |
+| **No wearable required** | ✅ Phone sensors & manual logs | ❌ Band required | ⚠️ Manual only — data sold |
 | **Data stays on device** | ✅ SQLite, local-first | ❌ Cloud | ❌ Cloud |
-| **Sells/ads your data** | ❌ Never | ❌ | ⚠️ |
-| **AI coach** | ✅ Free, on-device option | ❌ | ❌ |
-| **Source available** | ✅ Open source (GPLv3) | ❌ | ❌ |
+| **Never sells/ads your data** | ✅ | ⚠️ | ⚠️ |
+| **Free AI coach included** | ✅ On-device option | ❌ | ❌ |
+| **Open source** | ✅ GPLv3 | ❌ | ❌ |
 
 ---
 
