@@ -6,7 +6,7 @@
 
 **Myrri turns your Apple Health / Google Health Connect data into a personal coach: a daily morning brief, WHOOP-style strain & readiness scores, a biological-age estimate, habit tracking, AI food logging with barcode scanning, and a chat coach that actually knows your body.**
 
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blueviolet)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white)](package.json)
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo&logoColor=white)](app.json)
 [![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-5c5c5c)](#)
@@ -48,7 +48,7 @@ Every core feature — readiness, strain, biological age, journaling, food loggi
 | **Data stays on device** | ✅ SQLite, local-first | ❌ Cloud | ❌ Cloud |
 | **Sells/ads your data** | ❌ Never | ❌ | ⚠️ |
 | **AI coach** | ✅ Free, on-device option | ❌ | ❌ |
-| **Source available** | ✅ Free for noncommercial use | ❌ | ❌ |
+| **Source available** | ✅ Open source (GPLv3) | ❌ | ❌ |
 
 ---
 
@@ -156,9 +156,9 @@ eas build --profile development --platform android   # then install the APK
 
 ## 🤝 Contributing
 
-This project is **look-only unless you join the team**. You're welcome to read the code, learn from it, and suggest ideas — but please don't clone it, fork it, or ship it anywhere.
+Myrri is **free software** under the [GNU General Public License v3](LICENSE). You're welcome to read the code, learn from it, fork it, and build on it under the terms of that license.
 
-- **Want to contribute?** Join the team instead of forking — reach out on [Discord](#) and we'll add you to the repo.
+- **Want to contribute upstream?** Join the team — reach out on [Discord](#) and we'll add you to the repo.
 - **Good first issues:** [GitHub Issues](#)
 - **Ideas & feedback:** [Discord](#) · [Discussions](#)
 
@@ -178,11 +178,11 @@ Contributions happen **inside the team repo** — code, design, docs, translatio
 
 ## 📄 License
 
-**Read-only, look-only access.** This repository is open to read — the code is public so anyone can see how it works — but you are **not licensed to clone, copy, download, modify, redistribute, or build on it in any way**, and it may **never be used for commercial purposes** or any other use beyond looking at it. You may **not** present, publish, or claim it (or anything derived from it) as your own, and you may **not** attribute your own work to the Myrri team.
+Myrri is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License**, version 3 (or, at your option, any later version), as published by the Free Software Foundation.
 
-If you want to build on Myrri — improve it, translate it, fix bugs, or take it further — **join the team**. Contributions happen inside the repo; outside collaborators are added by the maintainers.
+This program is distributed in the hope that it will be useful, but **WITHOUT ANY WARRANTY**; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU General Public License](LICENSE) for details. You should have received a copy of the GNU General Public License along with this program; if not, see <https://www.gnu.org/licenses/>.
 
-> For any other use, contact the author for a separate license.
+Every source file in `app/` and `src/` carries the GPLv3 notice in its header.
 
 ---
 

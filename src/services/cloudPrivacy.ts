@@ -1,3 +1,11 @@
+// Myrri Health
+// Copyright (C) 2026 Pranesh Shivaraj
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
 /**
  * Best-effort removal of common direct identifiers before health or nutrition
  * context leaves the device. This is not a guarantee of anonymity.
