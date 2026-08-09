@@ -20,7 +20,7 @@ import { useGoBack } from "../../src/hooks/useGoBack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { HealthService, HealthData, computeStrainScore } from "../../src/services/health";
-import { AnimatedScoreRing } from "../../src/components/AnimatedScoreRing";
+import { BandGauge } from "../../src/components/BandGauge";
 import { StrainAreaChart } from "../../src/components/StrainAreaChart";
 import { RefreshButton } from "../../src/components/RefreshButton";
 import { theme, formatFriendlyDate } from "../../src/theme";
@@ -166,12 +166,11 @@ export default function StrainDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.hero, { opacity: fadeAnim }]}>
-          <AnimatedScoreRing
+          <BandGauge
             score={hasActivity ? strainScore : 0}
-            size={180}
-            strokeWidth={8}
-            color={hasActivity ? strainColor(strainScore) : theme.colors.border}
-            unit=""
+            color={hasActivity ? strainColor(strainScore) : theme.colors.muted}
+            label="Strain"
+            size={170}
           />
           <View style={styles.heroText}>
             <Text

@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useGoBack } from "../../src/hooks/useGoBack";
 import { HealthService, HealthData, computeSleepScore } from "../../src/services/health";
-import { AnimatedScoreRing } from "../../src/components/AnimatedScoreRing";
+import { BandGauge } from "../../src/components/BandGauge";
 import { RefreshButton } from "../../src/components/RefreshButton";
 import { theme, formatFriendlyDate } from "../../src/theme";
 import { loadPlan } from "../../src/services/coachPlan";
@@ -242,12 +242,11 @@ export default function SleepDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.hero, { opacity: fadeAnim }]}>
-          <AnimatedScoreRing
+          <BandGauge
             score={hasSleep ? sleepScore : 0}
-            size={180}
-            strokeWidth={8}
-            color={hasSleep ? theme.colors.sleep : theme.colors.border}
-            unit=""
+            color={hasSleep ? theme.colors.sleep : theme.colors.muted}
+            label="Sleep"
+            size={170}
           />
           <View style={styles.heroText}>
             <Text style={[styles.heroLabel, { color: hasSleep ? sleepColor(sleepScore) : theme.colors.muted }]}>

@@ -6,7 +6,7 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -55,6 +55,52 @@ function providerLabel(choice: LLMChoice): string {
   return PROVIDER_LABELS[choice] ?? "Off";
 }
 
+/**
+ * A switch flanked by its two unit options — `km [switch] mi` — so it's
+ * obvious what flipping the toggle does. The active side is highlighted.
+ */
+function UnitToggle({
+  leftLabel,
+  rightLabel,
+  activeRight,
+  onValueChange,
+  disabled,
+}: {
+  leftLabel: string;
+  rightLabel: string;
+  activeRight: boolean;
+  onValueChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={styles.unitToggle}>
+      <Text
+        style={[
+          styles.unitToggleLabel,
+          !activeRight && styles.unitToggleLabelActive,
+        ]}
+      >
+        {leftLabel}
+      </Text>
+      <Switch
+        value={activeRight}
+        onValueChange={onValueChange}
+        disabled={disabled}
+        trackColor={{ true: theme.colors.success, false: theme.colors.border }}
+        thumbColor="#FFFFFF"
+      />
+      <Text
+        style={[
+          styles.unitToggleLabel,
+          activeRight && styles.unitToggleLabelActive,
+        ]}
+      >
+        {rightLabel}
+      </Text>
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -68,6 +114,15 @@ export default function SettingsScreen() {
   const [briefHour, setBriefHour] = useState(7);
   const [briefMinute, setBriefMinute] = useState(0);
   const [briefBusy, setBriefBusy] = useState(false);
+  const [briefTestState, setBriefTestState] =
+    useState<"idle" | "sent" | "error">("idle");
+  const briefTestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (briefTestTimer.current) clearTimeout(briefTestTimer.current);
+    };
+  }, []);
 
   // ── Units ────────────────────────────────────────────────────
   const [distanceUnit, setDistanceUnitState] = useState<DistanceUnit>("km");
@@ -131,6 +186,16 @@ export default function SettingsScreen() {
       const ok = await enableMorningBrief(hour, minute);
       setBriefEnabled(ok);
     }
+  };
+
+  const handleTestBrief = async () => {
+    if (briefBusy) return;
+    setBriefBusy(true);
+    const ok = await sendTestBrief();
+    setBriefTestState(ok ? "sent" : "error");
+    if (briefTestTimer.current) clearTimeout(briefTestTimer.current);
+    briefTestTimer.current = setTimeout(() => setBriefTestState("idle"), 2500);
+    setBriefBusy(false);
   };
 
   // ── Health handlers ──────────────────────────────────────────
@@ -283,9 +348,42 @@ export default function SettingsScreen() {
                 <Text style={styles.briefTimeValue}>{briefHour < 12 ? "AM" : "PM"}</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.testBtn} onPress={() => sendTestBrief()} activeOpacity={0.8}>
-              <MaterialCommunityIcons name="bell-outline" size={18} color={theme.colors.primary} />
-              <Text style={styles.testBtnText}>Send a test brief now</Text>
+            <TouchableOpacity
+              style={styles.testBtn}
+              onPress={handleTestBrief}
+              disabled={briefBusy}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name={
+                  briefTestState === "sent"
+                    ? "check-circle"
+                    : briefTestState === "error"
+                      ? "alert-circle-outline"
+                      : "bell-outline"
+                }
+                size={18}
+                color={
+                  briefTestState === "sent"
+                    ? theme.colors.success
+                    : briefTestState === "error"
+                      ? theme.colors.danger
+                      : theme.colors.primary
+                }
+              />
+              <Text
+                style={[
+                  styles.testBtnText,
+                  briefTestState === "sent" && { color: theme.colors.success },
+                  briefTestState === "error" && { color: theme.colors.danger },
+                ]}
+              >
+                {briefTestState === "sent"
+                  ? "Test brief sent!"
+                  : briefTestState === "error"
+                    ? "Couldn't send — check notifications"
+                    : "Send a test brief now"}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -299,18 +397,18 @@ export default function SettingsScreen() {
           <View style={styles.rowCopy}>
             <Text style={styles.rowTitle}>Distance</Text>
             <Text style={styles.rowSub}>
-              {distanceUnit === "km" ? "Kilometers (km)" : "Miles (mi)"}
+              {distanceUnit === "km" ? "Kilometers" : "Miles"}
             </Text>
           </View>
-          <Switch
-            value={distanceUnit === "mi"}
+          <UnitToggle
+            leftLabel="km"
+            rightLabel="mi"
+            activeRight={distanceUnit === "mi"}
             onValueChange={async (value) => {
               const unit: DistanceUnit = value ? "mi" : "km";
               setDistanceUnitState(unit);
               await setDistanceUnit(unit);
             }}
-            trackColor={{ true: theme.colors.success, false: theme.colors.border }}
-            thumbColor="#FFFFFF"
           />
         </View>
         <Text style={styles.hint}>
@@ -324,18 +422,18 @@ export default function SettingsScreen() {
           <View style={styles.rowCopy}>
             <Text style={styles.rowTitle}>Weight</Text>
             <Text style={styles.rowSub}>
-              {weightUnit === "kg" ? "Kilograms (kg)" : "Pounds (lbs)"}
+              {weightUnit === "kg" ? "Kilograms" : "Pounds"}
             </Text>
           </View>
-          <Switch
-            value={weightUnit === "lb"}
+          <UnitToggle
+            leftLabel="kg"
+            rightLabel="lbs"
+            activeRight={weightUnit === "lb"}
             onValueChange={async (value) => {
               const unit: WeightUnit = value ? "lb" : "kg";
               setWeightUnitState(unit);
               await setWeightUnit(unit);
             }}
-            trackColor={{ true: theme.colors.success, false: theme.colors.border }}
-            thumbColor="#FFFFFF"
           />
         </View>
         <Text style={styles.hint}>
@@ -554,5 +652,21 @@ const styles = StyleSheet.create({
   testBtnText: {
     ...theme.typography.labelMd,
     color: theme.colors.primary,
+  },
+  unitToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  unitToggleLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.muted,
+    minWidth: 28,
+    textAlign: "center",
+  },
+  unitToggleLabelActive: {
+    color: theme.colors.ink,
+    fontFamily: "Nunito_700Bold",
+    fontWeight: "700",
   },
 });

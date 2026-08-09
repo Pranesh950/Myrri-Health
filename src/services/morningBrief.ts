@@ -267,17 +267,23 @@ export async function ensureMorningBriefScheduled(): Promise<void> {
   }
 }
 
-/** Fires the brief immediately (used by the test button in settings). */
-export async function sendTestBrief(): Promise<void> {
+/** Fires the brief immediately (used by the test button in settings).
+ * Returns true when the notification was scheduled, false if permission was
+ * denied or scheduling failed — callers surface this to the user. */
+export async function sendTestBrief(): Promise<boolean> {
   try {
+    const granted = await requestPermission();
+    if (!granted) return false;
     await ensureChannel();
     const { title, body } = await buildMorningMessage();
     await Notifications.scheduleNotificationAsync({
       content: { title, body, sound: "default", data: { type: "morning-brief", test: true } },
       trigger: null,
     });
+    return true;
   } catch (e) {
     console.warn("[MorningBrief] test send failed:", e);
+    return false;
   }
 }
 

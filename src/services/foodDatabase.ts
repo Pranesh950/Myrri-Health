@@ -61,27 +61,31 @@ async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       });
       let database = await SQLite.openDatabaseAsync(DATABASE_NAME);
 
-      // Databases copied from older app versions predate the barcodes table.
-      // Re-import the bundled asset so barcode scanning works without a manual
-      // reinstall. The food database holds no user data, so replacing it is safe.
+      // Databases copied from older app versions predate the barcodes table
+      // (or were built with an empty one). Re-import the bundled asset so
+      // barcode scanning works without a manual reinstall. The food database
+      // holds no user data, so replacing it is safe.
+      let barcodeRows = 0;
       try {
         const row = await database.getFirstAsync<{ n: number }>(
-          "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'barcodes'"
+          "SELECT COUNT(*) AS n FROM barcodes"
         );
-        if (!row || row.n === 0) {
-          database.closeSync();
-          await SQLite.importDatabaseFromAssetAsync(DATABASE_NAME, {
-            assetId: OPENNUTRITION_DATABASE_ASSET,
-            forceOverwrite: true,
-          });
-          database = await SQLite.openDatabaseAsync(DATABASE_NAME);
-        }
-      } catch (error) {
-        console.warn("[FoodDB] Barcode database upgrade failed:", error);
-        try {
-          database.closeSync();
-        } catch {}
+        barcodeRows = row?.n ?? 0;
+      } catch {
+        barcodeRows = 0; // Table missing on stale installs.
+      }
+      if (barcodeRows === 0) {
+        console.warn(
+          "[FoodDB] Barcodes missing or empty — re-importing bundled database."
+        );
+        database.closeSync();
+        await SQLite.importDatabaseFromAssetAsync(DATABASE_NAME, {
+          assetId: OPENNUTRITION_DATABASE_ASSET,
+          forceOverwrite: true,
+        });
         database = await SQLite.openDatabaseAsync(DATABASE_NAME);
+      } else {
+        console.log(`[FoodDB] Barcode database ready (${barcodeRows.toLocaleString()} barcodes).`);
       }
       return database;
     })().catch((error) => {

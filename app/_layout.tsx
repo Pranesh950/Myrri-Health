@@ -10,6 +10,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import {
   useFonts,
   Nunito_400Regular,
@@ -19,6 +20,18 @@ import {
 } from "@expo-google-fonts/nunito";
 import { HealthService } from "../src/services/health";
 import { ensureMorningBriefScheduled } from "../src/services/morningBrief";
+
+// Present notifications while the app is in the foreground. Without this
+// handler, expo-notifications silently drops every notification when the app
+// is open — which is exactly why "Send a test brief" appeared to do nothing.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);

@@ -6,7 +6,7 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-import { useCallback, useState, useRef, useMemo } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -419,6 +419,15 @@ export default function JournalScreen() {
   const [briefHour, setBriefHour] = useState(7);
   const [briefMinute, setBriefMinute] = useState(0);
   const [briefBusy, setBriefBusy] = useState(false);
+  const [briefTestState, setBriefTestState] =
+    useState<"idle" | "sent" | "error">("idle");
+  const briefTestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (briefTestTimer.current) clearTimeout(briefTestTimer.current);
+    };
+  }, []);
 
   // Macro editor state
   const [macroEditorVisible, setMacroEditorVisible] = useState(false);
@@ -755,6 +764,16 @@ export default function JournalScreen() {
     }
     setBriefBusy(false);
     setBriefVisible(false);
+  };
+
+  const handleTestBrief = async () => {
+    if (briefBusy) return;
+    setBriefBusy(true);
+    const ok = await sendTestBrief();
+    setBriefTestState(ok ? "sent" : "error");
+    if (briefTestTimer.current) clearTimeout(briefTestTimer.current);
+    briefTestTimer.current = setTimeout(() => setBriefTestState("idle"), 2500);
+    setBriefBusy(false);
   };
 
   const selectedDate = weekDays.find((d) => formatDateKey(d) === selectedKey) ?? today;
@@ -1270,11 +1289,40 @@ export default function JournalScreen() {
 
             <TouchableOpacity
               style={styles.briefTestBtn}
-              onPress={() => sendTestBrief()}
+              onPress={handleTestBrief}
+              disabled={briefBusy}
               activeOpacity={0.8}
             >
-              <MaterialCommunityIcons name="bell-outline" size={18} color={theme.colors.primary} />
-              <Text style={styles.briefTestText}>Send a test brief now</Text>
+              <MaterialCommunityIcons
+                name={
+                  briefTestState === "sent"
+                    ? "check-circle"
+                    : briefTestState === "error"
+                      ? "alert-circle-outline"
+                      : "bell-outline"
+                }
+                size={18}
+                color={
+                  briefTestState === "sent"
+                    ? theme.colors.success
+                    : briefTestState === "error"
+                      ? theme.colors.danger
+                      : theme.colors.primary
+                }
+              />
+              <Text
+                style={[
+                  styles.briefTestText,
+                  briefTestState === "sent" && { color: theme.colors.success },
+                  briefTestState === "error" && { color: theme.colors.danger },
+                ]}
+              >
+                {briefTestState === "sent"
+                  ? "Test brief sent!"
+                  : briefTestState === "error"
+                    ? "Couldn't send — check notifications"
+                    : "Send a test brief now"}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity

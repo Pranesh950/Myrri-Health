@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path, Defs, Stop, LinearGradient, Circle as SvgCircle } from "react-native-svg";
+import { LineChart, type lineDataItem } from "react-native-gifted-charts";
 import { HealthService, DailyActivity } from "../../src/services/health";
 import { theme, formatMonthYear } from "../../src/theme";
 
@@ -45,37 +45,18 @@ function formatDuration(totalMin: number): string {
   return `${h}h ${m}m`;
 }
 
-function buildCumulativePath(
-  daily: DailyActivity[],
-  width: number,
-  height: number
-): {
-  path: string;
-  maxHours: number;
-  endY: number;
-  points: { x: number; y: number; hours: number }[];
-} {
-  if (!daily.length) return { path: "", maxHours: 1, endY: height, points: [] };
+function buildCumulativeSeries(
+  daily: DailyActivity[]
+): { data: lineDataItem[]; maxHours: number } {
+  if (!daily.length) return { data: [], maxHours: 1 };
 
   let cumMin = 0;
-  const totals = daily.map((d) => {
+  const data: lineDataItem[] = daily.map((d) => {
     cumMin += d.activeMinutes || (d.steps > 3000 ? 20 : d.steps > 0 ? 5 : 0);
-    return cumMin / 60;
+    return { value: cumMin / 60 };
   });
-  const maxHours = Math.max(1, ...totals) * 1.1;
-  const step = daily.length > 1 ? width / (daily.length - 1) : width;
-
-  const points = totals.map((hours, i) => ({
-    x: i * step,
-    y: height - (hours / maxHours) * (height - 8) - 4,
-    hours,
-  }));
-
-  const path = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-    .join(" ");
-  const endY = points[points.length - 1]?.y ?? height;
-  return { path, maxHours, endY, points };
+  const maxHours = Math.max(1, ...data.map((d) => d.value ?? 0)) * 1.1;
+  return { data, maxHours };
 }
 
 function formatShortDate(date: string): string {
@@ -83,50 +64,12 @@ function formatShortDate(date: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-/** Highlighted point + tooltip shown while scrubbing the cumulative curve. */
-function ScrubOverlay({
-  point,
-  day,
-  width,
-}: {
-  point: { x: number; y: number; hours: number };
-  day?: DailyActivity;
-  width: number;
-}) {
-  const tooltipWidth = 132;
-  const tooltipLeft = Math.max(
-    4,
-    Math.min(point.x - tooltipWidth / 2, width - tooltipWidth - 4)
-  );
-  const tooltipTop = Math.max(2, point.y - 44);
 
-  return (
-    <>
-      <View style={[styles.scrubGuide, { left: point.x - 0.5 }]} />
-      <View style={[styles.scrubDotOuter, { left: point.x - 8, top: point.y - 8 }]} />
-      <View style={[styles.scrubDot, { left: point.x - 4, top: point.y - 4 }]} />
-      <View style={[styles.scrubTooltip, { left: tooltipLeft, top: tooltipTop }]}>
-        <Text style={styles.scrubTooltipDate}>
-          {day ? formatShortDate(day.date) : ""}
-        </Text>
-        <Text style={styles.scrubTooltipValue}>
-          {point.hours.toFixed(1)}h cumulative
-        </Text>
-        {day && day.workoutCount > 0 && (
-          <Text style={styles.scrubTooltipSub}>
-            {day.workoutCount} workout{day.workoutCount === 1 ? "" : "s"}
-          </Text>
-        )}
-      </View>
-    </>
-  );
-}
 
 export default function FitnessScreen() {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [daily, setDaily] = useState<DailyActivity[]>([]);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
 
   const loadData = useCallback(async () => {
@@ -135,7 +78,6 @@ export default function FitnessScreen() {
       await HealthService.initialize(false);
       const d = await HealthService.getDailyActivity(30);
       setDaily(d);
-      setSelectedDay(null);
     } catch (e) {
       console.warn("[Fitness] load failed:", e);
     } finally {
@@ -183,19 +125,7 @@ export default function FitnessScreen() {
   const chartGeomWidth =
     chartWidth > 0 ? chartWidth : Math.max(280, SCREEN_WIDTH - SIDE_PADDING - 32);
 
-  const chart = useMemo(
-    () => buildCumulativePath(daily, chartGeomWidth, 100),
-    [daily, chartGeomWidth]
-  );
-
-  const handleScrub = (evt: any) => {
-    const n = chart.points.length;
-    if (n < 1) return;
-    const step = n > 1 ? chartGeomWidth / (n - 1) : chartGeomWidth;
-    const x = evt.nativeEvent.locationX;
-    const index = Math.max(0, Math.min(n - 1, Math.round(x / step)));
-    setSelectedDay(index);
-  };
+  const chart = useMemo(() => buildCumulativeSeries(daily), [daily]);
 
   const monthLabel = formatMonthYear();
 
@@ -337,7 +267,7 @@ export default function FitnessScreen() {
             </View>
           </View>
 
-          {chart.path ? (
+          {chart.data.length > 0 ? (
             <View style={styles.dualChartContainer}>
               <Text style={styles.axisLabel}>{Math.ceil(chart.maxHours)}</Text>
               <Text style={styles.axisLabelBottom}>0</Text>
@@ -345,53 +275,70 @@ export default function FitnessScreen() {
               <View
                 style={styles.chartTouchArea}
                 onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}
-                onStartShouldSetResponder={() => true}
-                onResponderGrant={handleScrub}
-                onResponderMove={handleScrub}
-                onResponderRelease={() => {}}
                 accessibilityLabel="Cumulative activity chart — drag along the line to explore each day"
               >
-                <Svg
-                  width="100%"
-                  height={110}
-                  viewBox={`0 0 ${chartGeomWidth} 110`}
-                >
-                  <Defs>
-                    <LinearGradient id="currentLineGrad" x1="0" y1="0" x2="1" y2="0">
-                      <Stop offset="0%" stopColor="#C4892A" />
-                      <Stop offset="100%" stopColor="#C45C52" />
-                    </LinearGradient>
-                  </Defs>
-                  <Path
-                    d={chart.path}
-                    stroke="url(#currentLineGrad)"
-                    strokeWidth={2.5}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <SvgCircle
-                    cx={chartGeomWidth}
-                    cy={chart.endY}
-                    r={4}
-                    fill="#C45C52"
-                  />
-                </Svg>
-
-                {selectedDay != null && chart.points[selectedDay] && (
-                  <ScrubOverlay
-                    point={chart.points[selectedDay]}
-                    day={daily[selectedDay]}
+                {chartGeomWidth > 0 && (
+                  <LineChart
+                    data={chart.data}
                     width={chartGeomWidth}
+                    height={100}
+                    maxValue={chart.maxHours}
+                    areaChart
+                    curved
+                    thickness={2.5}
+                    color="#C45C52"
+                    startFillColor="#C4892A"
+                    endFillColor="#C45C52"
+                    startOpacity={0.3}
+                    endOpacity={0.04}
+                    hideDataPoints
+                    hideAxesAndRules
+                    hideYAxisText
+                    yAxisLabelWidth={0}
+                    rulesColor="transparent"
+                    initialSpacing={0}
+                    endSpacing={0}
+                    adjustToWidth
+                    disableScroll
+                    pointerConfig={{
+                      pointerColor: "#C45C52",
+                      radius: 5,
+                      pointerStripColor: "#C45C52",
+                      pointerStripWidth: 1,
+                      pointerStripUptoDataPoint: true,
+                      showPointerStrip: true,
+                      pointerLabelComponent: (items: any[], index: number) => {
+                        const item = items?.[0];
+                        if (!item) return null;
+                        const day = daily[index];
+                        const value = Number(item.value ?? 0);
+                        return (
+                          <View style={styles.scrubTooltip}>
+                            <Text style={styles.scrubTooltipDate}>
+                              {day ? formatShortDate(day.date) : ""}
+                            </Text>
+                            <Text style={styles.scrubTooltipValue}>
+                              {value.toFixed(1)}h cumulative
+                            </Text>
+                            {day && day.workoutCount > 0 && (
+                              <Text style={styles.scrubTooltipSub}>
+                                {day.workoutCount} workout{day.workoutCount === 1 ? "" : "s"}
+                              </Text>
+                            )}
+                          </View>
+                        );
+                      },
+                      pointerLabelWidth: 132,
+                      pointerLabelHeight: 58,
+                      autoAdjustPointerLabelPosition: true,
+                      pointerVanishDelay: 900,
+                      activatePointersOnLongPress: true,
+                    }}
                   />
                 )}
               </View>
 
-              {selectedDay == null && chart.points.length > 0 && (
-                <Text style={styles.scrubHint}>
-                  Drag along the line to explore
-                </Text>
-              )}
+              <Text style={styles.scrubHint}>Touch and hold, then drag to explore</Text>
             </View>
           ) : (
             <Text style={styles.emptyChartNote}>
@@ -548,34 +495,6 @@ const styles = StyleSheet.create({
     // Paints above the corner axis labels (zIndex 10) so the scrub tooltip
     // is never covered by them.
     zIndex: 12,
-  },
-  scrubGuide: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: theme.colors.ink,
-    opacity: 0.25,
-    zIndex: 2,
-  },
-  scrubDotOuter: {
-    position: "absolute",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#C45C52",
-    opacity: 0.25,
-    zIndex: 3,
-  },
-  scrubDot: {
-    position: "absolute",
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#C45C52",
-    borderWidth: 2,
-    borderColor: theme.colors.card,
-    zIndex: 4,
   },
   scrubTooltip: {
     position: "absolute",

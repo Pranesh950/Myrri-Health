@@ -17,6 +17,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -115,6 +116,11 @@ export default function FoodChatScreen() {
   const sessionRef = useRef<ChatSession | null>(null);
 
   const [showSearchFallback, setShowSearchFallback] = useState(params.mode === "search");
+  // True when this screen was OPENED in search mode (e.g. "Manual log" from
+  // the meal-options sheet). Its back button must then navigate back instead
+  // of flipping to the AI chat view — otherwise pressing back on the manual
+  // food log lands on the AI chat instead of the screen the user came from.
+  const [arrivedInSearchMode] = useState(() => params.mode === "search");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -234,6 +240,18 @@ export default function FoodChatScreen() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, showSearchFallback]);
+
+  // Keep Android's hardware back consistent with the header button: when the
+  // search view was toggled from the chat, back returns to the chat; when the
+  // screen was opened directly in search mode, the system back pops normally.
+  useEffect(() => {
+    if (!showSearchFallback || arrivedInSearchMode) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setShowSearchFallback(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [showSearchFallback, arrivedInSearchMode]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!sessionRef.current) return;
@@ -393,7 +411,16 @@ export default function FoodChatScreen() {
     return (
       <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setShowSearchFallback(false)} style={styles.headerIconBtn}>
+          <TouchableOpacity
+            onPress={() => {
+              // Opened as a standalone "Manual log" screen → go back to where
+              // the user came from (the journal tab). Toggled from the chat's
+              // search icon → return to the AI chat view.
+              if (arrivedInSearchMode) handleBack();
+              else setShowSearchFallback(false);
+            }}
+            style={styles.headerIconBtn}
+          >
             <MaterialCommunityIcons name="arrow-left" size={22} color={theme.colors.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Add Food</Text>

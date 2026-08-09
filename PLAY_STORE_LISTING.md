@@ -132,7 +132,9 @@ Syncs with Google Health Connect (steps, heart rate, HRV, sleep, calories, VO₂
 
 **Myrri is not a medical device** — it is a wellness tracker and does not provide medical advice or diagnosis.
 
-**Download Myrri and get your private AI health coach today. Free forever, your data stays on your phone.**
+**Download Myrri and get your private AI health coach today. Free, no subscription — your data stays on your phone.**
+
+*WHOOP is a trademark of Whoop, Inc.; Ōura is a trademark of Ōura Health Oy; MyFitnessPal is a trademark of MyFitnessPal, Inc.; Noom is a trademark of Noom, Inc. Myrri is an independent app and is not affiliated with, endorsed by, or sponsored by any of these companies. Feature and pricing comparisons reflect public information as of August 2026 and may change.*
 
 ---
 

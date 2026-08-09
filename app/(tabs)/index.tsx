@@ -302,19 +302,6 @@ export default function HomeScreen() {
         {/* Strain & Sleep */}
         <Animated.View style={[styles.bandsCard, { opacity: bandsAnim, transform: [{ translateY: bandsAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }]}>
           <TouchableOpacity
-            onPress={() => router.push("/strain/detail")}
-            activeOpacity={0.7}
-            style={styles.gaugeTouchable}
-          >
-            <BandGauge
-              label="Strain"
-              score={hasActivity ? strainScore : 0}
-              color={hasActivity ? theme.colors.danger : theme.colors.muted}
-              size={130}
-            />
-          </TouchableOpacity>
-          <View style={styles.ringDivider} />
-          <TouchableOpacity
             onPress={() => router.push("/sleep/detail")}
             activeOpacity={0.7}
             style={styles.gaugeTouchable}
@@ -335,6 +322,19 @@ export default function HomeScreen() {
                 {data?.sleepHours?.toFixed(1)}h of {sleepGoal}h goal
               </Text>
             )}
+          </TouchableOpacity>
+          <View style={styles.ringDivider} />
+          <TouchableOpacity
+            onPress={() => router.push("/strain/detail")}
+            activeOpacity={0.7}
+            style={styles.gaugeTouchable}
+          >
+            <BandGauge
+              label="Strain"
+              score={hasActivity ? strainScore : 0}
+              color={hasActivity ? theme.colors.danger : theme.colors.muted}
+              size={130}
+            />
           </TouchableOpacity>
         </Animated.View>
 

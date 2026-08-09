@@ -13,7 +13,6 @@ import Svg, {
   Defs,
   LinearGradient,
   Stop,
-  Circle as SvgCircle,
 } from "react-native-svg";
 import { theme } from "../theme";
 
@@ -48,6 +47,30 @@ interface Geom {
 
 const TOOLTIP_WIDTH = 96;
 
+/**
+ * Cap on plotted points. A day of heart-rate samples can be thousands of
+ * readings (watches write every second during activity); rendering them all
+ * is wasteful and — on some Android hardware — outright blanks the chart.
+ * Bucket-averaging down to a few hundred points keeps the exact shape while
+ * guaranteeing a snappy, always-visible render.
+ */
+const MAX_PLOT_POINTS = 150;
+
+/** Averages `values` into at most `maxPoints` buckets, preserving the shape. */
+function downsample(values: number[], maxPoints: number): number[] {
+  if (values.length <= maxPoints) return values;
+  const bucketSize = values.length / maxPoints;
+  const out: number[] = [];
+  for (let i = 0; i < maxPoints; i++) {
+    const start = Math.floor(i * bucketSize);
+    const end = Math.max(start + 1, Math.floor((i + 1) * bucketSize));
+    let sum = 0;
+    for (let j = start; j < end; j++) sum += values[j];
+    out.push(sum / (end - start));
+  }
+  return out;
+}
+
 /** Smooths a polyline with quadratic curves through segment midpoints. */
 function smoothLine(points: GeomPoint[]): string {
   if (points.length < 3) {
@@ -66,6 +89,17 @@ function smoothLine(points: GeomPoint[]): string {
   return d;
 }
 
+/**
+ * Interactive gradient area chart rendered with plain react-native-svg.
+ *
+ * Deliberately NOT built on react-native-gifted-charts: that library's
+ * LineChart has a long list of Android-specific rendering failures (blank
+ * charts with adjustToWidth, broken area gradients, touch conflicts inside
+ * ScrollViews, and blank/crash with large datasets), which kept breaking the
+ * heart-rate chart on Android devices. react-native-svg draws native paths
+ * identically on both platforms, and the PanResponder handles scrubbing with
+ * Android-safe coordinates (pageX, which is not shifted by scroll position).
+ */
 export function InteractiveAreaChart({
   values,
   color = "#5B7BE1",
@@ -88,14 +122,26 @@ export function InteractiveAreaChart({
   const rawId = useId();
   const gradientId = `grad${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
 
+  const plotValues = useMemo(
+    () =>
+      downsample(
+        values.map((v) => (Number.isFinite(v) ? v : 0)),
+        MAX_PLOT_POINTS
+      ),
+    [values]
+  );
+  // Per-index labels only line up with the plotted points when no
+  // downsampling happened; once values are bucketed, a label would point at
+  // the wrong sample, so drop it rather than show wrong data.
+  const wasDownsampled = plotValues.length !== values.length;
+
   const geom: Geom | null = useMemo(() => {
-    if (width <= 0 || values.length < 2) return null;
-    const clean = values.map((v) => (Number.isFinite(v) ? v : 0));
-    const maxValue = Math.max(...clean, 1) * 1.15;
+    if (width <= 0 || plotValues.length < 2) return null;
+    const maxValue = Math.max(...plotValues, 1) * 1.15;
     const plotTop = 10;
     const plotBottom = height - 12;
-    const step = width / (clean.length - 1);
-    const points: GeomPoint[] = clean.map((value, i) => ({
+    const step = width / (plotValues.length - 1);
+    const points: GeomPoint[] = plotValues.map((value, i) => ({
       x: i * step,
       y: plotBottom - (value / maxValue) * (plotBottom - plotTop),
       value,
@@ -106,7 +152,7 @@ export function InteractiveAreaChart({
     const last = points[points.length - 1];
     const areaPath = `${linePath} L${last.x.toFixed(1)},${height} L${first.x.toFixed(1)},${height} Z`;
     return { points, linePath, areaPath, step };
-  }, [width, values, height]);
+  }, [width, plotValues, height]);
 
   const scrubToX = (x: number) => {
     if (!geom) return;
@@ -131,9 +177,9 @@ export function InteractiveAreaChart({
     return evt?.nativeEvent?.locationX ?? 0;
   };
 
-  // Keep the tooltip visible briefly after the finger lifts (mirrors the old
-  // pointerVanishDelay) instead of snapping away — an abrupt dismiss reads as
-  // glitchy. The delay is cancelled as soon as the user touches again.
+  // Keep the tooltip visible briefly after the finger lifts instead of
+  // snapping away — an abrupt dismiss reads as glitchy. The delay is
+  // cancelled as soon as the user touches again.
   const scheduleHide = () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
@@ -177,70 +223,66 @@ export function InteractiveAreaChart({
     });
   };
 
-  // Keep the chart's height reserved before the first layout so cards never
-  // collapse or flash placeholder text on mount.
-  if (width === 0) {
-    return <View style={{ height }} />;
-  }
-
-  if (!geom) {
-    return (
-      <View style={[styles.empty, { height }]}>
-        <Text style={styles.emptyText}>Not enough data to chart</Text>
-      </View>
-    );
-  }
-
-  const activePoint = activeIndex != null ? geom.points[activeIndex] : null;
+  const activePoint = activeIndex != null ? geom?.points[activeIndex] ?? null : null;
   const tooltipLeft = activePoint
     ? Math.max(4, Math.min(activePoint.x - TOOLTIP_WIDTH / 2, width - TOOLTIP_WIDTH - 4))
     : 0;
   const tooltipTop = activePoint ? Math.max(2, activePoint.y - 54) : 0;
 
   return (
+    // The wrapper carrying onLayout is ALWAYS mounted — gating it behind a
+    // width check would deadlock (width can only be learned from layout).
+    // minHeight reserves the chart's height before the first measurement so
+    // the card never collapses or flashes placeholder text.
     <View
       ref={wrapRef}
-      style={styles.wrap}
+      style={[styles.wrap, { minHeight: height }]}
       onLayout={onLayout}
       accessibilityLabel={accessibilityLabel}
       {...panResponder.panHandlers}
     >
-      {width > 0 && (
-        <Svg width={width} height={height}>
-          <Defs>
-            <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor={color} stopOpacity={0.28} />
-              <Stop offset="100%" stopColor={color} stopOpacity={0.03} />
-            </LinearGradient>
-          </Defs>
-          <Path d={geom.areaPath} fill={`url(#${gradientId})`} />
-          <Path
-            d={geom.linePath}
-            stroke={color}
-            strokeWidth={2.5}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-      )}
+      {width > 0 && geom ? (
+        <>
+          <Svg width={width} height={height}>
+            <Defs>
+              <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor={color} stopOpacity={0.28} />
+                <Stop offset="100%" stopColor={color} stopOpacity={0.03} />
+              </LinearGradient>
+            </Defs>
+            <Path d={geom.areaPath} fill={`url(#${gradientId})`} />
+            <Path
+              d={geom.linePath}
+              stroke={color}
+              strokeWidth={2.5}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
 
-      {activePoint && (
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <View style={[styles.guide, { left: activePoint.x - 0.5 }]} />
-          <View style={[styles.dotOuter, { left: activePoint.x - 7, top: activePoint.y - 7 }]} />
-          <View style={[styles.dot, { left: activePoint.x - 3.5, top: activePoint.y - 3.5 }]} />
-          <View style={[styles.tooltip, { left: tooltipLeft, top: tooltipTop }]}>
-            {labels?.[activePoint.index] ? (
-              <Text style={styles.tooltipDate}>{labels[activePoint.index]}</Text>
-            ) : null}
-            <Text style={styles.tooltipValue}>
-              {activePoint.value.toFixed(decimals)}
-              {unit ? ` ${unit}` : ""}
-            </Text>
-          </View>
+          {activePoint && (
+            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              <View style={[styles.guide, { left: activePoint.x - 0.5 }]} />
+              <View style={[styles.dotOuter, { left: activePoint.x - 7, top: activePoint.y - 7 }]} />
+              <View style={[styles.dot, { left: activePoint.x - 3.5, top: activePoint.y - 3.5 }]} />
+              <View style={[styles.tooltip, { left: tooltipLeft, top: tooltipTop }]}>
+                {!wasDownsampled && labels?.[activePoint.index] ? (
+                  <Text style={styles.tooltipDate}>{labels[activePoint.index]}</Text>
+                ) : null}
+                <Text style={styles.tooltipValue}>
+                  {activePoint.value.toFixed(decimals)}
+                  {unit ? ` ${unit}` : ""}
+                </Text>
+              </View>
+            </View>
+          )}
+        </>
+      ) : width > 0 && !geom ? (
+        <View style={[styles.empty, { height }]}>
+          <Text style={styles.emptyText}>Not enough data to chart</Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }

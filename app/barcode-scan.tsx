@@ -30,6 +30,7 @@ export default function BarcodeScanScreen() {
   const handleBack = useGoBack();
   const [permission, requestPermission] = useCameraPermissions();
   const [status, setStatus] = useState<ScanStatus>("idle");
+  const [lastCode, setLastCode] = useState<string | null>(null);
   const busyRef = useRef(false);
 
   const handleBarcode = useCallback(
@@ -37,6 +38,7 @@ export default function BarcodeScanScreen() {
       if (busyRef.current || !data) return;
       busyRef.current = true;
       setStatus("searching");
+      setLastCode(data.trim());
       try {
         const food = await searchFoodByBarcode(data);
         if (food) {
@@ -132,9 +134,12 @@ export default function BarcodeScanScreen() {
           {status === "not_found" && (
             <View style={styles.statusCard}>
               <MaterialCommunityIcons name="food-off" size={26} color={theme.colors.warning} />
-              <Text style={styles.statusTitle}>Product not found</Text>
+              <Text style={styles.statusTitle}>Barcode not in database</Text>
+              <Text style={styles.statusCode}>Scanned code: {lastCode ?? "—"}</Text>
               <Text style={styles.statusText}>
-                This barcode isn't in our offline database yet.
+                The offline database covers ~313,000 barcodes, mostly US and
+                European packaged products. Regional or newer items often
+                aren't in it yet — search manually or log with the AI assistant.
               </Text>
               <View style={styles.statusActions}>
                 <TouchableOpacity style={styles.statusBtn} onPress={resetScanner} activeOpacity={0.8}>
@@ -254,6 +259,13 @@ const styles = StyleSheet.create({
     ...theme.typography.titleSm,
     color: theme.colors.ink,
     marginTop: theme.spacing.xs,
+  },
+  statusCode: {
+    ...theme.typography.legal,
+    color: theme.colors.body,
+    fontFamily: "Nunito_600SemiBold",
+    fontWeight: "600",
+    marginTop: 4,
   },
   statusText: {
     ...theme.typography.caption,
