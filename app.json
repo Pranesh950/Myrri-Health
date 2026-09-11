@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.myrri.app",
+      "bundleIdentifier": "com.myrri.myrri",
       "infoPlist": {
         "NSHealthShareUsageDescription": "We read your health data to show you personalized daily insights and trends.",
         "NSHealthUpdateUsageDescription": "We write health data when you manually log workouts or metrics.",
