@@ -61,11 +61,20 @@
   },
   "private": true,
   "expo": {
+    "install": {
+      "exclude": [
+        "expo",
+        "expo-constants",
+        "expo-file-system"
+      ]
+    },
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [
-          "react-native-health"
-        ]
+          "react-native-health",
+          "expo-health-connect"
+        ],
+        "listUnknownPackages": false
       }
     }
   }
