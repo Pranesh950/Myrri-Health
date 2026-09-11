@@ -1,11 +1,11 @@
 name: Submit iOS to TestFlight
 # Builds production iOS and auto-submits to TestFlight on every push to main.
-# Per https://docs.expo.dev/submit/ios/ — requires App Store Connect API Key configured via `eas credentials`.
+# Per https://docs.expo.dev/submit/ios/ — requires App Store Connect API Key (EAS env: EXPO_ASC_*)
 
 on:
   push:
     branches: ["main"]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   build_ios:
