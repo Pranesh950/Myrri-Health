@@ -1,6 +1,9 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
+# freebuff creds file (used by CREDENTIALS.md pattern locally)
+.freebuff/
+
 node_modules/
 
 # Expo
@@ -9,7 +12,7 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native / Apple certs
 .kotlin/
 *.orig.*
 *.jks
@@ -17,6 +20,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+!assets/*.p8
 
 # Metro
 .metro-health-check*
@@ -32,6 +36,9 @@ yarn-error.*
 
 # local env files
 .env*.local
+
+# local credentials — never commit tokens
+CREDENTIALS.md
 
 # typescript
 *.tsbuildinfo
