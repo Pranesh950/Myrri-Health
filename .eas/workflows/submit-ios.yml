@@ -14,6 +14,8 @@ jobs:
     params:
       platform: ios
       profile: production
+      env:
+        EXPO_NO_CAPABILITY_SYNC: "1"
 
   submit_ios:
     name: Submit to TestFlight
