@@ -57,6 +57,9 @@
             "compileSdkVersion": 36,
             "targetSdkVersion": 35,
             "buildToolsVersion": "36.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "26.0"
           }
         }
       ],
@@ -72,7 +75,12 @@
           "healthUpdatePermission": "We write health data when you manually log workouts or metrics."
         }
       ],
-      "llama.rn",
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": false
+        }
+      ],
       "./plugins/with-llama-pruned.js",
       "expo-sqlite",
       [

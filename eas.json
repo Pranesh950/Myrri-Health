@@ -22,7 +22,8 @@
       "autoIncrement": true,
       "env": {
         "GRADLE_OPTS": "-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError",
-        "JAVA_OPTS": "-Xmx4g -XX:MaxMetaspaceSize=512m"
+        "JAVA_OPTS": "-Xmx4g -XX:MaxMetaspaceSize=512m",
+        "EXPO_NO_CAPABILITY_SYNC": "0"
       }
     }
   },

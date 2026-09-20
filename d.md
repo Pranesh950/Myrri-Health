@@ -1,0 +1,1 @@
+EXPO_TOKEN="v3lBU1BCdXuGlgX32G5Awu-XTzbYDIPTgLmipa7D" eas build
