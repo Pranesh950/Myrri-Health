@@ -59,7 +59,7 @@
             "buildToolsVersion": "36.0.0"
           },
           "ios": {
-            "deploymentTarget": "26.0"
+            "deploymentTarget": "15.1"
           }
         }
       ],

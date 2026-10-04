@@ -6,8 +6,6 @@ import FoundationModels
 #endif
 
 public class AppleLLMModule: Module {
-  private var model: Any? = nil
-
   public func definition() -> ModuleDefinition {
     Name("AppleLLMModule")
 
@@ -29,21 +27,9 @@ public class AppleLLMModule: Module {
 
       #if canImport(FoundationModels)
       do {
-        let llm = try await LLM.load(.appleEmbeddedModel)
-
-        let messages: [LLM.Message] = [
-          LLM.Message(role: .system, content: systemPrompt),
-          LLM.Message(role: .user, content: prompt),
-        ]
-
-        let parameters = LLM.Parameters(
-          temperature: 0.7,
-          maxTokens: 512,
-          topP: 0.9
-        )
-
-        let result = try await llm.generate(messages: messages, parameters: parameters)
-        return result.text
+        let session = LanguageModelSession(instructions: systemPrompt)
+        let response = try await session.respond(to: prompt)
+        return response.content
       } catch {
         throw ModuleError("Apple LLM generation failed: \(error.localizedDescription)")
       }
