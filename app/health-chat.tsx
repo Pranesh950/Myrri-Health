@@ -328,9 +328,8 @@ export default function HealthChatScreen() {
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={handleBack} style={styles.headerIconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialCommunityIcons name="arrow-left" size={22} color={theme.colors.ink} />
-          </TouchableOpacity>
-          <View style={styles.headerIconCircle}>
-            <MaterialCommunityIcons name="brain" size={18} color={theme.colors.info} />
+          </TouchableOpacity>            <View style={styles.headerIconCircle}>
+            <MaterialCommunityIcons name="robot-outline" size={18} color={theme.colors.info} />
           </View>
           <View>
             <View style={styles.headerTitleRow}>
@@ -715,6 +714,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   statusOverlay: { flex: 1, alignItems: "center", justifyContent: "center", padding: theme.spacing.xxl },
   statusIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.colors.surfaceElevated, alignItems: "center", justifyContent: "center", marginBottom: theme.spacing.lg },
+  statusIconChatWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center", marginBottom: theme.spacing.lg },
   statusTitle: { ...theme.typography.titleLg, color: theme.colors.ink, marginBottom: theme.spacing.xs },
   statusSub: { ...theme.typography.bodyMd, color: theme.colors.muted, textAlign: "center", lineHeight: 20 },
   progressTrack: { width: 220, height: 6, backgroundColor: theme.colors.border, borderRadius: 3, marginTop: theme.spacing.lg, overflow: "hidden" },
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
   outlineBtnText: { color: theme.colors.ink, fontSize: 14, fontFamily: "Nunito_600SemiBold", fontWeight: "600" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: theme.spacing.lg, paddingVertical: 14, backgroundColor: theme.colors.card, borderBottomWidth: 1, borderBottomColor: theme.colors.border, ...theme.shadows.header },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  headerIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.surfaceElevated, alignItems: "center", justifyContent: "center" },
+  headerIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
   headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   headerTitle: { ...theme.typography.titleSm, color: theme.colors.ink },
   headerSubtitle: { fontSize: 11, color: theme.colors.muted, fontFamily: "Nunito_500Medium", fontWeight: "500", marginTop: 2 },
@@ -756,13 +756,14 @@ const styles = StyleSheet.create({
   modelRowName: { ...theme.typography.bodyMd, color: theme.colors.ink, fontFamily: "Nunito_600SemiBold", fontWeight: "600" },
   modelRowSize: { ...theme.typography.legal, color: theme.colors.muted, marginTop: 2 },
   modelActiveBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: `${theme.colors.success}15`, alignItems: "center", justifyContent: "center" },
+  headerIconChatCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
   modelDownloadBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: `${theme.colors.primary}10`, alignItems: "center", justifyContent: "center" },
   modelProgressWrap: { width: 80 },
   modelProgressTrack: { height: 6, backgroundColor: theme.colors.border, borderRadius: 3, overflow: "hidden" },
   modelProgressFill: { height: "100%", backgroundColor: theme.colors.primary, borderRadius: 3 },
   // ── Streaming bubble ─────────────────────────────────────────
   streamingRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  streamingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.surfaceElevated, borderWidth: 1, borderColor: theme.colors.border, alignItems: "center", justifyContent: "center", alignSelf: "flex-end" },
+  streamingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center", alignSelf: "flex-end" },
   streamingBubble: { maxWidth: "78%", backgroundColor: theme.colors.card, borderRadius: 22, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 16, paddingVertical: 12, ...theme.shadows.cardSoft },
   streamingText: { fontSize: 15, lineHeight: 22, color: theme.colors.ink, fontFamily: "Nunito_400Regular", fontWeight: "400" },
   streamingCursor: { color: theme.colors.danger, fontFamily: "Nunito_700Bold", fontWeight: "700" },

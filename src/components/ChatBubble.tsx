@@ -258,6 +258,18 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     gap: 10,
   },
+  avatarChatBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-end",
+    marginBottom: 2,
+  },
 
   // ── Avatar ─────────────────────────────────────────────────────
   avatar: {
@@ -267,6 +279,18 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceElevated,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-end",
+    marginBottom: 2,
+  },
+  avatarChat: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-end",
