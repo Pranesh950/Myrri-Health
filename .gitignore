@@ -39,6 +39,7 @@ yarn-error.*
 
 # local credentials — never commit tokens
 CREDENTIALS.md
+d.md
 
 # typescript
 *.tsbuildinfo

@@ -34,6 +34,7 @@ import {
 import { theme, formatAsOf } from "../../src/theme";
 import { calculateBiologicalAge } from "../../src/services/biology";
 import { getHealthProfile, HealthProfile } from "../../src/services/profile";
+import { recordTodayReadiness } from "../../src/services/insights";
 
 interface BiomarkerCardProps {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -228,6 +229,25 @@ export default function BiologyScreen() {
         setBioReliability(null);
         setBioConfidenceLabel("");
         setBioBaselineDays(null);
+      }
+
+      // Record today's readiness snapshot + score once per day (idempotent). This is the
+      // only write path for the readiness baseline; the AI's `get_recovery` read no longer
+      // mutates it. Skips days with no recovery signal at all.
+      if (
+        today.heartRateVariability != null ||
+        today.restingHeartRate != null ||
+        today.sleepHours != null
+      ) {
+        try {
+          await recordTodayReadiness({
+            hrv: today.heartRateVariability,
+            rhr: today.restingHeartRate,
+            sleepHours: today.sleepHours,
+          });
+        } catch (e) {
+          console.warn("[Biology] readiness record failed:", e);
+        }
       }
     } catch (e) {
       console.warn("[Biology] load failed:", e);

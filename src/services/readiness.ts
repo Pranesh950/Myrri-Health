@@ -99,18 +99,25 @@ const SUMMARY_PHRASES_LOW = [
   "Stress elevated",
 ];
 
-function pickRandom(arr: string[]): string {
-  return arr[Math.floor(Math.random() * arr.length)];
+// Deterministic phrasing: the same score always yields the same summary, so asking
+// twice (or two tool calls in one turn) never reads as an inconsistency.
+function summaryFor(score: number): string {
+  if (score >= 70) return SUMMARY_PHRASES_HIGH[score % SUMMARY_PHRASES_HIGH.length];
+  if (score >= 40) return SUMMARY_PHRASES_MODERATE[score % SUMMARY_PHRASES_MODERATE.length];
+  return SUMMARY_PHRASES_LOW[score % SUMMARY_PHRASES_LOW.length];
 }
 
+/**
+ * Pure calculation: derives readiness from the stored baseline without mutating any
+ * state. Recording today's snapshot is the caller's job (see `recordTodayReadiness`),
+ * so a read-only tool call cannot change the baseline.
+ */
 export async function calculateReadiness(
   currentHRV: number | null,
   currentRHR: number | null,
   currentSleepHours: number | null
 ): Promise<ReadinessResult> {
   const baseline = await loadBaseline();
-
-  await recordDailySnapshot(currentHRV, currentRHR, currentSleepHours);
 
   const hrvValues = getRecentValues(baseline.snapshots, "hrv", 21);
   const rhrValues = getRecentValues(baseline.snapshots, "rhr", 21);
@@ -141,14 +148,7 @@ export async function calculateReadiness(
 
   score = Math.max(0, Math.min(100, score));
 
-  let summary: string;
-  if (score >= 70) {
-    summary = pickRandom(SUMMARY_PHRASES_HIGH);
-  } else if (score >= 40) {
-    summary = pickRandom(SUMMARY_PHRASES_MODERATE);
-  } else {
-    summary = pickRandom(SUMMARY_PHRASES_LOW);
-  }
+  const summary = summaryFor(score);
 
   const hrvDeviation =
     currentHRV != null && hrvValues.length > 0

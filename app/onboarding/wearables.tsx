@@ -469,9 +469,9 @@ const ANDROID_SYSTEM_STEPS: Step[] = [
 
 const IOS_SYSTEM_STEPS: Step[] = [
   {
-    title: "Open Settings",
+    title: "Open the Health app",
     description:
-      "Tap the button below to open Myrri's Settings page, or open the Health app directly.",
+      "Tap the button below to jump straight to Apple Health, or open it from your Home Screen.",
   },
   {
     title: "Health > Data Access & Devices",
@@ -504,7 +504,14 @@ async function openSystemHealthConnect() {
     } catch {}
     await Linking.openSettings();
   } else {
-    Linking.openSettings();
+    // On iOS, Health access lives in the Health app — Myrri's own Settings page
+    // has nothing to toggle — so prefer the Health app and only fall back to
+    // app settings if the deep link is unavailable.
+    try {
+      await Linking.openURL("x-apple-health://");
+      return;
+    } catch {}
+    await Linking.openSettings();
   }
 }
 

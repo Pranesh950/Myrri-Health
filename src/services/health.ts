@@ -1064,6 +1064,17 @@ export const HealthService = {
           return;
         } catch {}
       }
+      if (ctx.type === "healthkit") {
+        // HealthKit read access is only editable inside the Health app — the
+        // app's own Settings page has no Health toggles — so prefer it and
+        // fall back to app settings when the deep link is unavailable.
+        try {
+          await Linking.openURL("x-apple-health://");
+          return;
+        } catch (e) {
+          console.warn("[HealthService] Health app deep link failed:", e);
+        }
+      }
       await Linking.openSettings();
     } catch (e) {
       console.warn("[HealthService] openSettings failed:", e);

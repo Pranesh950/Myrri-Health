@@ -49,7 +49,7 @@ import {
   estimateServing,
   getMeals,
   deleteMeal as dbDeleteMeal,
-  updateMeal as dbUpdateMeal,
+  rescaleMeal as dbRescaleMeal,
   FoodItem,
   MealEntry,
   getFoodDatabaseAttribution,
@@ -342,7 +342,7 @@ export default function FoodChatScreen() {
         if (approval.type === "delete") {
           await dbDeleteMeal(approval.date, approval.mealId);
         } else if (approval.type === "edit" && approval.newServingG) {
-          await dbUpdateMeal(approval.date, approval.mealId, { servingGrams: approval.newServingG });
+          await dbRescaleMeal(approval.date, approval.mealId, approval.newServingG);
         }
         setMessages((prev) =>
           prev.map((m) =>
@@ -734,8 +734,7 @@ const styles = StyleSheet.create({
   outlineBtnText: { color: theme.colors.ink, fontSize: 14, fontFamily: "Nunito_600SemiBold", fontWeight: "600" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: theme.spacing.lg, paddingVertical: 14, backgroundColor: theme.colors.card, borderBottomWidth: 1, borderBottomColor: theme.colors.border, ...theme.shadows.header },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  headerIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
-  headerIconChatCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
+  headerIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.surfaceElevated, alignItems: "center", justifyContent: "center" },
   headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   headerTitle: { ...theme.typography.titleSm, color: theme.colors.ink },
   headerSubtitle: { fontSize: 11, color: theme.colors.muted, fontFamily: "Nunito_500Medium", fontWeight: "500", marginTop: 2 },
@@ -759,7 +758,6 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 15, color: theme.colors.ink, height: 48, fontFamily: "Nunito_400Regular", fontWeight: "400" },
   searchList: { padding: theme.spacing.lg, paddingTop: theme.spacing.md, flexGrow: 1 },
   searchEmpty: { alignItems: "center", paddingTop: 48, gap: theme.spacing.sm },
-  searchEmptyChatIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
   searchEmptyText: { ...theme.typography.bodyMd, color: theme.colors.muted },
   foodRow: { flexDirection: "row", alignItems: "center", backgroundColor: theme.colors.card, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, padding: theme.spacing.md, marginBottom: theme.spacing.sm },
   foodInfo: { flex: 1 },
@@ -785,8 +783,7 @@ const styles = StyleSheet.create({
   modelProgressFill: { height: "100%", backgroundColor: theme.colors.primary, borderRadius: 3 },
   // ── Streaming bubble ─────────────────────────────────────────
   streamingRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  streamingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center", alignSelf: "flex-end" },
-  streamingAvatarChat: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center", alignSelf: "flex-end" },
+  streamingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.surfaceElevated, borderWidth: 1, borderColor: theme.colors.border, alignItems: "center", justifyContent: "center", alignSelf: "flex-end" },
   streamingBubble: { maxWidth: "78%", backgroundColor: theme.colors.card, borderRadius: 22, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 16, paddingVertical: 12, ...theme.shadows.cardSoft },
   streamingText: { fontSize: 15, lineHeight: 22, color: theme.colors.ink, fontFamily: "Nunito_400Regular", fontWeight: "400" },
   streamingCursor: { color: theme.colors.danger, fontFamily: "Nunito_700Bold", fontWeight: "700" },

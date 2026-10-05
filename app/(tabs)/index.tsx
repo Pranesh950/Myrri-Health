@@ -149,12 +149,52 @@ export default function HomeScreen() {
   const showConnectBanner = loaded && status !== "connected";
 
   const handleConnect = async () => {
+    // iOS only shows the HealthKit permission sheet once per data type. Once
+    // Apple has recorded a decision there is no sheet left to show, so calling
+    // init again looks like a dead button — give the tap a visible response and
+    // send the user to the Health app, where access actually lives.
+    if (Platform.OS === "ios") {
+      if (status === "unavailable") {
+        Alert.alert(
+          "Apple Health not available",
+          "HealthKit needs a development or App Store build — it does not work in Expo Go. You can keep using Myrri with manual logging in the meantime."
+        );
+        return;
+      }
+      if (status === "access_requested" || status === "connected_no_data") {
+        Alert.alert(
+          "Review access in the Health app",
+          "Apple does not tell apps which read types you allowed. Open Health → Sharing → Apps → Myrri to review or change access, then come back and pull to refresh.",
+          [
+            { text: "Not now", style: "cancel" },
+            {
+              text: "Open Health app",
+              onPress: async () => {
+                await HealthService.openSettings();
+                loadData();
+              },
+            },
+          ]
+        );
+        return;
+      }
+    }
+
     if (status === "unavailable" || status === "access_requested") {
       await HealthService.openSettings();
       loadData();
       return;
     }
-    await HealthService.initialize(true);
+
+    const granted = await HealthService.initialize(true);
+    if (!granted) {
+      Alert.alert(
+        "Health access could not be requested",
+        Platform.OS === "ios"
+          ? "HealthKit is unavailable in this build or on this device. You can continue using Myrri with manual logging."
+          : "Health Connect is unavailable right now. Install or update Health Connect, then tap Connect again."
+      );
+    }
     loadData();
   };
 
@@ -283,9 +323,8 @@ export default function HomeScreen() {
                   : status === "connected_no_data"
                     ? Platform.OS === "android"
                       ? "Access is allowed, but Health Connect has no recent records. Open your wearable app and sync it first."
-                      : "Access is allowed, but Apple Health has no recent records. Open the Health app and confirm your watch has synced."
-                  : status === "access_requested"
-                    ? "Apple hides read permission details. Review this app in Settings > Health."
+                      : "Access is allowed, but Apple Health has no recent records. Open the Health app and confirm your watch has synced."                    : status === "access_requested"
+                    ? "Apple hides read permission details. Tap to review access in the Health app."
                     : status === "not_connected"
                       ? "You chose to set this up later. Tap to connect when ready."
                       : "Allow read access to steps, sleep, heart rate, and more."}

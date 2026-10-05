@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.myrri.myrri",
       "infoPlist": {
         "NSHealthShareUsageDescription": "We read your health data to show you personalized daily insights and trends.",
@@ -44,8 +44,7 @@
         "android.permission.health.READ_LEAN_BODY_MASS",
         "android.permission.health.READ_VO2_MAX",
         "android.permission.health.READ_EXERCISE",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ]
     },
     "plugins": [
@@ -55,7 +54,7 @@
           "android": {
             "minSdkVersion": 26,
             "compileSdkVersion": 36,
-            "targetSdkVersion": 35,
+            "targetSdkVersion": 36,
             "buildToolsVersion": "36.0.0"
           },
           "ios": {

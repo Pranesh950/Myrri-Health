@@ -16,6 +16,7 @@ import {
   Switch,
   ActivityIndicator,
   Platform,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -209,7 +210,15 @@ export default function SettingsScreen() {
       ) {
         await HealthService.openSettings();
       } else {
-        await HealthService.initialize(true);
+        const granted = await HealthService.initialize(true);
+        if (!granted) {
+          Alert.alert(
+            "Health access could not be requested",
+            Platform.OS === "ios"
+              ? "HealthKit is unavailable in this build or on this device. You can keep using Myrri with manual logging."
+              : "Health Connect is unavailable right now. Install or update Health Connect, then try again."
+          );
+        }
       }
       const status = await HealthService.getConnectionStatus();
       setHealthStatus(status);

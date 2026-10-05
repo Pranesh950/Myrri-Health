@@ -8,7 +8,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getRecentHabitLogs, HABIT_TAGS } from "./journal";
-import { calculateReadiness } from "./readiness";
+import { calculateReadiness, recordDailySnapshot } from "./readiness";
 import { HealthService } from "./health";
 
 export interface HabitImpact {
@@ -105,11 +105,35 @@ export async function calculateHabitImpacts(days: number = 14): Promise<HabitImp
   return impacts.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
 }
 
-export async function recordTodayReadiness(): Promise<void> {
+/**
+ * Records today's readiness snapshot and score. This is the sole write path: the score
+ * is computed against the *prior* baseline before today's snapshot is persisted, so a
+ * given day is never compared against itself. Idempotent per date.
+ *
+ * Pass `values` when the caller already loaded today's health data to avoid a duplicate read.
+ */
+export async function recordTodayReadiness(values?: {
+  hrv: number | null;
+  rhr: number | null;
+  sleepHours: number | null;
+}): Promise<void> {
+  let hrv: number | null;
+  let rhr: number | null;
+  let sleepHours: number | null;
+  if (values) {
+    ({ hrv, rhr, sleepHours } = values);
+  } else {
+    await HealthService.initialize(false);
+    const data = await HealthService.getTodayData();
+    hrv = data.heartRateVariability;
+    rhr = data.restingHeartRate;
+    sleepHours = data.sleepHours;
+  }
+
+  const readiness = await calculateReadiness(hrv, rhr, sleepHours);
+
   const today = new Date();
   const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  await HealthService.initialize(false);
-  const data = await HealthService.getTodayData();
-  const readiness = await calculateReadiness(data.heartRateVariability, data.restingHeartRate, data.sleepHours);
+  await recordDailySnapshot(hrv, rhr, sleepHours);
   await recordReadiness(dateKey, readiness.score);
 }

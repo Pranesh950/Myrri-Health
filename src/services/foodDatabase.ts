@@ -288,6 +288,52 @@ export async function updateMeal(date: string, mealId: string, updates: Partial<
   return null;
 }
 
+/**
+ * Rescale a logged meal to a new serving size, recomputing calories and macros.
+ *
+ * The stored macros were derived from the catalog's per-100 g values when the meal was
+ * logged. Re-deriving them here keeps servings that change size consistent with the day's
+ * totals; without it `updateMeal` would change only `servingGrams` and leave the macros
+ * stale. Falls back to a proportional rescale of the stored values when the catalog row is
+ * no longer available. Returns the updated entry, or null if the meal is missing.
+ */
+export async function rescaleMeal(
+  date: string,
+  mealId: string,
+  newServingG: number
+): Promise<MealEntry | null> {
+  if (!(newServingG > 0)) return null;
+  const meals = await getMeals(date);
+  const current = meals.find((m) => m.id === mealId);
+  if (!current) return null;
+
+  const food = await getFoodByFdcId(current.fdcId).catch(() => null);
+  let macros: Pick<MealEntry, "calories" | "protein" | "carbs" | "fat" | "fiber">;
+  if (food) {
+    const multiplier = newServingG / 100;
+    macros = {
+      calories: Math.round(food.calories * multiplier),
+      protein: Math.round(food.protein * multiplier * 10) / 10,
+      carbs: Math.round(food.carbs * multiplier * 10) / 10,
+      fat: Math.round(food.fat * multiplier * 10) / 10,
+      fiber: Math.round(food.fiber * multiplier * 10) / 10,
+    };
+  } else if (current.servingGrams > 0) {
+    const factor = newServingG / current.servingGrams;
+    macros = {
+      calories: Math.round(current.calories * factor),
+      protein: Math.round(current.protein * factor * 10) / 10,
+      carbs: Math.round(current.carbs * factor * 10) / 10,
+      fat: Math.round(current.fat * factor * 10) / 10,
+      fiber: Math.round(current.fiber * factor * 10) / 10,
+    };
+  } else {
+    return null;
+  }
+
+  return updateMeal(date, mealId, { servingGrams: newServingG, ...macros });
+}
+
 export async function getMealDatesWithData(): Promise<string[]> {
   const allKeys = await AsyncStorage.getAllKeys();
   return allKeys

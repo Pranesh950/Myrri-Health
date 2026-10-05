@@ -196,6 +196,7 @@ export default function HealthChatScreen() {
     if (!sessionRef.current) return;
     setLoading(true);
     setStreamingText("");
+    resetTodaySnapshot();
     try {
       const history = await sessionRef.current.sendMessage(text, (partial) => {
         setStreamingText(partial);
@@ -351,7 +352,7 @@ export default function HealthChatScreen() {
 
       <FlatList ref={flatRef} data={messages} keyExtractor={(_, i) => String(i)} contentContainerStyle={[styles.messageList, messages.length === 0 && !streamingText && styles.messageListEmpty]} keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <View style={styles.welcomeWrap}><Text style={styles.welcomeEmoji}>🧠</Text><Text style={styles.welcomeTitle}>Health AI</Text><Text style={styles.welcomeBody}>Ask me anything about your health.{"\n\n"}Try "How did I sleep last night?" or{"\n"}"Build me a plan" or{"\n"}"Analyze my recovery."</Text><BetaChip text="AI answers are in beta — double-check before acting on health advice." /></View>
+          <View style={styles.welcomeWrap}><Text style={styles.welcomeEmoji}>🧠</Text><Text style={styles.welcomeTitle}>Health AI</Text><Text style={styles.welcomeBody}>Ask me anything about your health.{"\n\n"}Try "How did I sleep last night?" or{"\n"}"Build me a plan" or{"\n"}"Analyze my recovery."</Text><BetaChip text="AI answers are in beta — not medical advice. Consult a clinician before making health decisions." /></View>
         }
         ListFooterComponent={
           loading && !streamingText ? (
@@ -448,6 +449,30 @@ function resolveDate(raw?: unknown): string {
 
 // ── Health tool handlers ──────────────────────────────────────
 
+// One `sendMessage` can issue several health tool calls back-to-back, and each used to
+// re-run `HealthService.initialize(false)` + `getTodayData()` (16 native queries). We
+// memoise the snapshot for the duration of a single user message and clear it when the
+// next message starts, so reads within one turn are O(1) but never cross-message stale.
+let todaySnapshotCache: ReturnType<typeof HealthService.getTodayData> | null = null;
+
+function resetTodaySnapshot(): void {
+  todaySnapshotCache = null;
+}
+
+function getTodaySnapshot(): ReturnType<typeof HealthService.getTodayData> {
+  if (!todaySnapshotCache) {
+    todaySnapshotCache = (async () => {
+      await HealthService.initialize(false);
+      return HealthService.getTodayData();
+    })().catch((e) => {
+      // Never cache a rejected promise — a later tool in the same turn must be able to retry.
+      todaySnapshotCache = null;
+      throw e;
+    });
+  }
+  return todaySnapshotCache;
+}
+
 function buildHealthToolHandlers(): Record<string, ToolHandler> {
   return {
     // ── Coach planning ────────────────────────────────────
@@ -455,12 +480,29 @@ function buildHealthToolHandlers(): Record<string, ToolHandler> {
 
     // ── Activity ──────────────────────────────────────────
     get_steps: async (args) => {
-      const { days, label } = resolvePeriod(args.period as string);
+      const { days, label, dateOffset } = resolvePeriod(args.period as string);
       try {
         await HealthService.initialize(false);
 
+        if (days === 1 && dateOffset < 0) {
+          // "yesterday": read the seeded daily row for that date instead of ignoring the
+          // offset and answering with today's snapshot. Distance is only available for
+          // the live snapshot, so it is omitted rather than reported from the wrong day.
+          const date = resolveDate("yesterday");
+          const daily = await HealthService.getDailyActivity(2);
+          const row = daily.find((d) => d.date === date);
+          return {
+            toolResult: JSON.stringify({
+              tool: "get_steps", period: label, date,
+              steps: row?.steps ?? 0,
+              activeCalories: Math.round(row?.activeCalories ?? 0),
+              hasData: row?.hasData ?? false,
+            }),
+          };
+        }
+
         if (days === 1) {
-          const data = await HealthService.getTodayData();
+          const data = await getTodaySnapshot();
           const steps = data.steps ?? 0;
           return {
             toolResult: JSON.stringify({
@@ -490,8 +532,7 @@ function buildHealthToolHandlers(): Record<string, ToolHandler> {
     get_heart: async (args) => {
       const { days, label } = resolvePeriod(args.period as string);
       try {
-        await HealthService.initialize(false);
-        const data = await HealthService.getTodayData();
+        const data = await getTodaySnapshot();
         const hr = data.heartRate?.length
           ? { avg: Math.round(data.heartRate.reduce((a, b) => a + b, 0) / data.heartRate.length), max: Math.max(...data.heartRate), min: Math.min(...data.heartRate), readings: data.heartRate.length }
           : null;
@@ -562,8 +603,7 @@ function buildHealthToolHandlers(): Record<string, ToolHandler> {
     // ── Body & Vitals ─────────────────────────────────────
     get_vitals: async () => {
       try {
-        await HealthService.initialize(false);
-        const data = await HealthService.getTodayData();
+        const data = await getTodaySnapshot();
         return {
           toolResult: JSON.stringify({
             tool: "get_vitals",
@@ -580,8 +620,7 @@ function buildHealthToolHandlers(): Record<string, ToolHandler> {
 
     get_body: async () => {
       try {
-        await HealthService.initialize(false);
-        const data = await HealthService.getTodayData();
+        const data = await getTodaySnapshot();
         return {
           toolResult: JSON.stringify({
             tool: "get_body",
@@ -600,8 +639,7 @@ function buildHealthToolHandlers(): Record<string, ToolHandler> {
     // ── Recovery ──────────────────────────────────────────
     get_sleep: async (args) => {
       try {
-        await HealthService.initialize(false);
-        const data = await HealthService.getTodayData();
+        const data = await getTodaySnapshot();
         const sleepHours = data.sleepHours ?? 0;
         const sleepScore = computeSleepScore(data);
 
@@ -622,11 +660,29 @@ function buildHealthToolHandlers(): Record<string, ToolHandler> {
           };
         }
 
-        const { days } = resolvePeriod(args.period as string);
+        const { days, dateOffset, label } = resolvePeriod(args.period as string);
         if (days > 1) {
-          const history = await getReadinessHistory(days);
-          // Readiness history includes dates; we can show recent sleep trends via snapshots
-          result.note = "Historical sleep data is limited. For trends, check get_recovery for readiness over time.";
+          // The device exposes per-night sleep history; use it instead of answering a
+          // multi-day question with only today's numbers plus an apologetic note.
+          const history = await HealthService.getSleepHistory(days);
+          const nights = history
+            .slice(-Math.min(days, 7))
+            .map((h) => ({ date: h.date, hours: +h.value.toFixed(1) }));
+          result.period = label;
+          result.nights = nights;
+          result.averageHours = nights.length
+            ? +(nights.reduce((s, n) => s + n.hours, 0) / nights.length).toFixed(1)
+            : 0;
+        } else if (dateOffset < 0) {
+          // "yesterday" — read that night's total from history rather than today's.
+          const date = resolveDate("yesterday");
+          const history = await HealthService.getSleepHistory(2);
+          const night = history.find((h) => h.date === date);
+          result.period = label;
+          result.sleepHours = night ? night.value.toFixed(1) : "0.0";
+          delete result.sleepScore;
+          delete result.hasSleepStages;
+          delete result.sleepStages;
         }
 
         return { toolResult: JSON.stringify(result) };
@@ -637,8 +693,7 @@ function buildHealthToolHandlers(): Record<string, ToolHandler> {
 
     get_recovery: async () => {
       try {
-        await HealthService.initialize(false);
-        const data = await HealthService.getTodayData();
+        const data = await getTodaySnapshot();
         const strainScore = computeStrainScore(data);
         const sleepScore = computeSleepScore(data);
         const readiness = await calculateReadiness(data.heartRateVariability, data.restingHeartRate, data.sleepHours);
@@ -714,7 +769,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   statusOverlay: { flex: 1, alignItems: "center", justifyContent: "center", padding: theme.spacing.xxl },
   statusIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.colors.surfaceElevated, alignItems: "center", justifyContent: "center", marginBottom: theme.spacing.lg },
-  statusIconChatWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center", marginBottom: theme.spacing.lg },
   statusTitle: { ...theme.typography.titleLg, color: theme.colors.ink, marginBottom: theme.spacing.xs },
   statusSub: { ...theme.typography.bodyMd, color: theme.colors.muted, textAlign: "center", lineHeight: 20 },
   progressTrack: { width: 220, height: 6, backgroundColor: theme.colors.border, borderRadius: 3, marginTop: theme.spacing.lg, overflow: "hidden" },
@@ -725,7 +779,7 @@ const styles = StyleSheet.create({
   outlineBtnText: { color: theme.colors.ink, fontSize: 14, fontFamily: "Nunito_600SemiBold", fontWeight: "600" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: theme.spacing.lg, paddingVertical: 14, backgroundColor: theme.colors.card, borderBottomWidth: 1, borderBottomColor: theme.colors.border, ...theme.shadows.header },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  headerIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
+  headerIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.surfaceElevated, alignItems: "center", justifyContent: "center" },
   headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   headerTitle: { ...theme.typography.titleSm, color: theme.colors.ink },
   headerSubtitle: { fontSize: 11, color: theme.colors.muted, fontFamily: "Nunito_500Medium", fontWeight: "500", marginTop: 2 },
@@ -756,14 +810,13 @@ const styles = StyleSheet.create({
   modelRowName: { ...theme.typography.bodyMd, color: theme.colors.ink, fontFamily: "Nunito_600SemiBold", fontWeight: "600" },
   modelRowSize: { ...theme.typography.legal, color: theme.colors.muted, marginTop: 2 },
   modelActiveBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: `${theme.colors.success}15`, alignItems: "center", justifyContent: "center" },
-  headerIconChatCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
   modelDownloadBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: `${theme.colors.primary}10`, alignItems: "center", justifyContent: "center" },
   modelProgressWrap: { width: 80 },
   modelProgressTrack: { height: 6, backgroundColor: theme.colors.border, borderRadius: 3, overflow: "hidden" },
   modelProgressFill: { height: "100%", backgroundColor: theme.colors.primary, borderRadius: 3 },
   // ── Streaming bubble ─────────────────────────────────────────
   streamingRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  streamingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center", alignSelf: "flex-end" },
+  streamingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.surfaceElevated, borderWidth: 1, borderColor: theme.colors.border, alignItems: "center", justifyContent: "center", alignSelf: "flex-end" },
   streamingBubble: { maxWidth: "78%", backgroundColor: theme.colors.card, borderRadius: 22, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 16, paddingVertical: 12, ...theme.shadows.cardSoft },
   streamingText: { fontSize: 15, lineHeight: 22, color: theme.colors.ink, fontFamily: "Nunito_400Regular", fontWeight: "400" },
   streamingCursor: { color: theme.colors.danger, fontFamily: "Nunito_700Bold", fontWeight: "700" },
